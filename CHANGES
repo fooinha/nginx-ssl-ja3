@@ -1,0 +1,11 @@
+Changes with nginx-ssl-ja3 0.0.1                                   20 Aug  2017
+
+    *) nginx modules
+      *) config
+      *) http_ssl_ja3_hash variable
+      *) stream_ssl_ja3_hash variable
+    *) docker
+      *) dockerfiles
+      *) compose
+    *) travis
+

@@ -1,0 +1,53 @@
+sudo: required
+dist: trusty
+
+os: linux
+
+language: c
+
+compiler:
+  - gcc
+
+cache:
+  apt: true
+  directories:
+
+env:
+  global:
+    - NGINX_PREFIX=/opt/nginx
+    - JOBS=4
+    - PATH=$PATH:$NGINX_PREFIX/sbin
+
+before_install:
+  - sudo apt-get install -qq -y software-properties-common
+  - sudo add-apt-repository "deb http://us.archive.ubuntu.com/ubuntu/ xenial main universe"
+  - sudo apt-get update -qq -y --fix-missing
+  - sudo apt-get install -qq -y --fix-missing cpanminus mercurial build-essential make clang valgrind
+
+install:
+  - if [ ! -d /opt ]; then mkdir /opt; fi
+  - git clone https://github.com/openresty/test-nginx.git
+  - hg clone http://hg.nginx.org/nginx
+  - git clone https://github.com/openssl/openssl
+
+script:
+  - ls -la
+  - cd openssl
+  - ./config -d
+  - make -j$JOBS > build.log 2>&1 || (cat build.log && exit 1)
+  - sudo make install > build.log 2>&1 || (cat build.log && exit 1)
+  - cd ..
+  - cd test-nginx
+  - sudo cpanm .
+  - cd ..
+  - export LD_LIBRARY_PATH=/usr/local/lib/
+  - cp -v docker/debian-nginx-ssl-ja3/nginx.ssl.extensions.patch nginx/.
+  - cd nginx
+  - patch -p1 < nginx.ssl.extensions.patch
+  - auto/configure --with-debug --with-stream --with-ld-opt="-Wl,-E" --prefix=$NGINX_PREFIX  --with-http_ssl_module --with-stream_ssl_module --add-module=$PWD/.. > build.log 2>&1 || (cat build.log && exit 1)
+  - make -j$JOBS > build.log 2>&1 || (cat build.log && exit 1)
+  - sudo make install > build.log 2>&1 || (cat build.log && exit 1)
+  - cd ..
+  - export PATH=$NGINX_PREFIX/sbin:$PATH
+  - /opt/nginx/sbin/nginx -V
+  - ldd /opt/nginx/sbin/nginx

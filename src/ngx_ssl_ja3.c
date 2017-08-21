@@ -92,12 +92,12 @@ static const int nid_list[] = {
 };
 
 
-static int
+static unsigned char
 ngx_ssl_ja3_nid_to_cid(int nid)
 {
-    size_t sz = (sizeof(nid_list) / sizeof(nid_list[0]));
+    unsigned char sz = (sizeof(nid_list) / sizeof(nid_list[0]));
 
-    for (size_t i = 0; i < sz; i++) {
+    for (unsigned char i = 0; i < sz; i++) {
         if (nid == nid_list[i]) {
             return i+1;
         }
@@ -119,6 +119,7 @@ ngx_ssj_ja3_num_digits(int n)
 }
 
 
+#if (NGX_DEBUG)
 static void
 ngx_ssl_ja3_detail_print(ngx_pool_t *pool, ngx_ssl_ja3_t *ja3)
 {
@@ -173,6 +174,7 @@ ngx_ssl_ja3_detail_print(ngx_pool_t *pool, ngx_ssl_ja3_t *ja3)
         );
     }
 }
+#endif
 
 
 void
@@ -357,7 +359,7 @@ ngx_ssl_ja3(ngx_connection_t *c, ngx_pool_t *pool, ngx_ssl_ja3_t *ja3) {
     /* Elliptic curve points */
     ja3->curves_sz = SSL_get1_curves(ssl, NULL);
     if (ja3->curves_sz) {
-        curves_out = OPENSSL_malloc(ja3->curves_sz);
+        curves_out = OPENSSL_malloc(ja3->curves_sz * sizeof(int));
         if (curves_out == NULL) {
             return NGX_DECLINED;
         }
@@ -369,7 +371,7 @@ ngx_ssl_ja3(ngx_connection_t *c, ngx_pool_t *pool, ngx_ssl_ja3_t *ja3) {
         if (ja3->curves == NULL) {
             return NGX_DECLINED;
         }
-        for (size_t i = 0; i < ja3->curves_sz; ++i) {
+        for (size_t i = 0; i < ja3->curves_sz; i++) {
             ja3->curves[i] = ngx_ssl_ja3_nid_to_cid(curves_out[i]);
         }
 

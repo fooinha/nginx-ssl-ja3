@@ -22,9 +22,9 @@ services:
         hostname: nginx-dev
         container_name: nginx-ssl-ja3
         ports:
-          - "81:81"
+          - "443:443"
         expose:
-          - 81
+          - 443
         network_mode: bridge
         tty: true
         privileged: true

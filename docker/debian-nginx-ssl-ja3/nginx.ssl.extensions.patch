@@ -1,10 +1,12 @@
-diff -r a2f5e25d6a28 src/event/ngx_event_openssl.c
---- a/src/event/ngx_event_openssl.c	Thu Aug 10 22:21:23 2017 +0300
-+++ b/src/event/ngx_event_openssl.c	Sat Aug 19 23:03:53 2017 +0000
-@@ -1221,6 +1221,51 @@
+diff -r 2e8de3d81783 src/event/ngx_event_openssl.c
+--- a/src/event/ngx_event_openssl.c	Tue Aug 22 17:36:12 2017 +0300
++++ b/src/event/ngx_event_openssl.c	Tue Aug 22 20:20:30 2017 +0000
+@@ -1221,6 +1221,60 @@
  }
  
  
++#if OPENSSL_VERSION_NUMBER >= 0x10101000L
++
 +int
 +ngx_SSL_early_cb_fn(SSL *s, int *al, void *arg) {
 +
@@ -14,6 +16,7 @@ diff -r a2f5e25d6a28 src/event/ngx_event_openssl.c
 +    ngx_connection_t *c;
 +
 +    c = arg;
++
 +    if (c == NULL) {
 +        return 1;
 +    }
@@ -23,55 +26,65 @@ diff -r a2f5e25d6a28 src/event/ngx_event_openssl.c
 +    }
 +
 +    c->ssl->client_extensions_size = 0;
++    c->ssl->client_extensions = NULL;
 +
 +    got_extensions = SSL_early_get1_extensions_present(s,
 +                                                       &ext_out,
 +                                                       &ext_len);
-+    if (got_extensions) {
-+        if (ext_out && ext_len > 0) {
-+            c->ssl->client_extensions_size = ext_len;
-+
-+            c->ssl->client_extensions =
-+                ngx_palloc(c->pool, sizeof(int) * ext_len);
-+            if (c->ssl->client_extensions == NULL) {
-+                OPENSSL_free(ext_out);
-+                return 1;
-+            }
-+
-+            ngx_memcpy(c->ssl->client_extensions,
-+                       ext_out,
-+                       sizeof(int) * ext_len);
-+
-+            OPENSSL_free(ext_out);
-+        }
++    if (!got_extensions) {
++        return 1;
 +    }
++
++    if (!ext_out) {
++        return 1;
++    }
++
++    if (!ext_len) {
++        return 1;
++    }
++
++    c->ssl->client_extensions = ngx_palloc(c->pool, sizeof(int) * ext_len);
++    if (c->ssl->client_extensions == NULL) {
++        OPENSSL_free(ext_out);
++        return 1;
++    }
++
++    c->ssl->client_extensions_size = ext_len;
++    ngx_memcpy(c->ssl->client_extensions, ext_out, sizeof(int) * ext_len);
++
++    OPENSSL_free(ext_out);
 +
 +    return 1;
 +}
++#endif
 +
 +
  ngx_int_t
  ngx_ssl_handshake(ngx_connection_t *c)
  {
-@@ -1229,6 +1274,8 @@
+@@ -1229,6 +1283,10 @@
  
      ngx_ssl_clear_error(c->log);
  
++#if OPENSSL_VERSION_NUMBER >= 0x10101000L
 +    SSL_CTX_set_early_cb(c->ssl->session_ctx, ngx_SSL_early_cb_fn, c);
++#endif
 +
      n = SSL_do_handshake(c->ssl->connection);
  
      ngx_log_debug1(NGX_LOG_DEBUG_EVENT, c->log, 0, "SSL_do_handshake: %d", n);
-diff -r a2f5e25d6a28 src/event/ngx_event_openssl.h
---- a/src/event/ngx_event_openssl.h	Thu Aug 10 22:21:23 2017 +0300
-+++ b/src/event/ngx_event_openssl.h	Sat Aug 19 23:03:53 2017 +0000
-@@ -85,6 +85,9 @@
+diff -r 2e8de3d81783 src/event/ngx_event_openssl.h
+--- a/src/event/ngx_event_openssl.h	Tue Aug 22 17:36:12 2017 +0300
++++ b/src/event/ngx_event_openssl.h	Tue Aug 22 20:20:30 2017 +0000
+@@ -85,6 +85,11 @@
      unsigned                    no_wait_shutdown:1;
      unsigned                    no_send_shutdown:1;
      unsigned                    handshake_buffer_set:1;
 +
++#if OPENSSL_VERSION_NUMBER >= 0x10101000L
 +    size_t                      client_extensions_size;
 +    int                        *client_extensions;
++#endif
  };
  
  

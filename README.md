@@ -87,7 +87,12 @@ $ make && make install
 ```
 ## Tests
 
-Not available yet.
+Make sure that the lib directory for nginx-tests is available in the 't' directory.
+
+
+```
+$ TEST_NGINX_BINARY=/usr/local/nginx/sbin/nginx prove -v
+```
 
 ## Docker
 

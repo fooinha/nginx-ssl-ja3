@@ -62,6 +62,9 @@ RUN cd nginx-ssl-ja3 && git checkout ${GIT_BRANCH}
 
 WORKDIR /build
 
+# Get test framework
+RUN git clone https://github.com/nginx/nginx-tests
+
 # Get openssl master from git
 RUN git clone https://github.com/openssl/openssl
 
@@ -80,12 +83,6 @@ WORKDIR /build/nginx
 COPY nginx.ssl.extensions.patch /build/nginx
 RUN cat nginx.ssl.extensions.patch
 RUN patch -p1 < nginx.ssl.extensions.patch
-
-# Get test framework
-RUN git clone https://github.com/openresty/test-nginx.git
-
-# Install test framework and dependencies
-RUN cd test-nginx/ && cpanm .
 
 # Configure, make and install
 RUN ./auto/configure --add-module=/build/nginx-ssl-ja3 --with-http_ssl_module --with-stream_ssl_module --with-stream --with-debug --with-ld-opt="-L/usr/local/lib -Wl,-E"

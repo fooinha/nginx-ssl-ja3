@@ -3,7 +3,6 @@ ngx_module_incs=$ngx_addon_dir/src
 
 NGINX_VERSION=`grep version src/core/nginx.h  | sed 's/#define nginx_version *//;'`
 
-#TODO: To validate if correct OpenSSL version is available
 
 if [ ! -z "${NGINX_VERSION}" ]
 then
@@ -26,3 +25,22 @@ NGX_ADDON_SRCS="$NGX_ADDON_SRCS                         \
  "
 
 CORE_LIBS="$CORE_LIBS"
+
+#
+# OpenSSL 1.1.1 with SSL_CTX_set_early_cb
+#
+ngx_feature="SSL_CTX_set_early_cb()"
+ngx_feature_name="NGX_HAVE_OPENSSL_SSL_EARLY_CB"
+ngx_feature_run=no
+ngx_feature_incs="#include <openssl/ssl.h>"
+ngx_feature_path=
+ngx_feature_libs="-lssl $NGX_LD_OPT"
+ngx_feature_test="SSL_CTX_set_early_cb(0, 0, 0);"
+. auto/feature
+
+if [ $ngx_found = no ]; then
+    echo " ! incorrect OpenSSL version. use >= 1.1.1"
+    exit 1
+fi
+
+

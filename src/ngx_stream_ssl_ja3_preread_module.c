@@ -79,15 +79,17 @@ ngx_stream_ssl_ja3_hash(ngx_stream_session_t *s,
         return NGX_ERROR;
     }
 
-    ngx_ssl_ja3(s->connection, s->connection->pool, &ja3);
+    if (ngx_ssl_ja3(s->connection, s->connection->pool, &ja3) == NGX_DECLINED) {
+        return NGX_ERROR;
+    }
     ngx_ssl_ja3_fp(s->connection->pool, &ja3, &fp);
 
 
     ngx_md5_init(&ctx);
     ngx_md5_update(&ctx, fp.data, fp.len);
     ngx_md5_final(hash, &ctx);
-
     ngx_hex_dump(v->data, hash, 16);
+
     v->len = 32;
     v->valid = 1;
     v->no_cacheable = 1;

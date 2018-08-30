@@ -67,7 +67,7 @@ diff -r 2e8de3d81783 src/event/ngx_event_openssl.c
      ngx_ssl_clear_error(c->log);
  
 +#if OPENSSL_VERSION_NUMBER >= 0x10101000L
-+    SSL_CTX_set_early_cb(c->ssl->session_ctx, ngx_SSL_early_cb_fn, c);
++    SSL_CTX_set_client_hello_cb(c->ssl->session_ctx, ngx_SSL_early_cb_fn, c);
 +#endif
 +
      n = SSL_do_handshake(c->ssl->connection);

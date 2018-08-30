@@ -27,7 +27,7 @@ NGX_ADDON_SRCS="$NGX_ADDON_SRCS                         \
 CORE_LIBS="$CORE_LIBS"
 
 #
-# OpenSSL 1.1.1 with SSL_CTX_set_early_cb
+# OpenSSL 1.1.1 with SSL_CTX_set_client_hello_cb
 #
 ngx_feature="SSL_CTX_set_client_hello_cb()"
 ngx_feature_name="NGX_HAVE_OPENSSL_SSL_CLIENT_HELLO_CB"

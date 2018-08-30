@@ -60,7 +60,7 @@ stream {
 
 The master version OpenSSL is required because this module fetches the
 extensions types declared at SSL/TLS Client Hello by using the new early
-callback [SSL_CTX_set_early_cb](https://www.openssl.org/docs/manmaster/man3/SSL_CTX_set_early_cb.html).
+callback [SSL_CTX_set_client_hello_cb](https://www.openssl.org/docs/manmaster/man3/SSL_CTX_set_client_hello_cb.html).
 
 I was unable to find a way to get these values with the current versions of
 nginx and OpenSSL.

@@ -28,7 +28,7 @@ diff -r 2e8de3d81783 src/event/ngx_event_openssl.c
 +    c->ssl->client_extensions_size = 0;
 +    c->ssl->client_extensions = NULL;
 +
-+    got_extensions = SSL_early_get1_extensions_present(s,
++    got_extensions = SSL_client_hello_get1_extensions_present(s,
 +                                                       &ext_out,
 +                                                       &ext_len);
 +    if (!got_extensions) {

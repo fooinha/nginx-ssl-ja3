@@ -81,7 +81,23 @@ the patch is already applied. Check the Dockerfile of the dev image.
 Build as a common nginx module.
 
 ```bash
+
+# Hack/patch nginx
+
+$ patch -p1 < /build/ngx_ssl_ja3/patches/latest.patch
+
+patching file src/event/ngx_event_openssl.c
+Hunk #1 succeeded at 1358 (offset 137 lines).
+Hunk #2 succeeded at 1426 (offset 143 lines).
+patching file src/event/ngx_event_openssl.h
+Hunk #1 succeeded at 99 (offset 1 line).
+
+# Configure
+
 $ ./configure --add-module=/build/ngx_ssl_ja3 --with-http_ssl_module --with-stream_ssl_module --with-debug --with-stream
+
+# Install
+
 $ make && make install
 
 ```

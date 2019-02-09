@@ -180,7 +180,8 @@ ngx_ssl_ja3_detail_print(ngx_pool_t *pool, ngx_ssl_ja3_t *ja3)
 void
 ngx_ssl_ja3_fp(ngx_pool_t *pool, ngx_ssl_ja3_t *ja3, ngx_str_t *out)
 {
-    size_t                    len = 0, cur = 0;
+    size_t                    len = 0, cur = 0, added = 0;
+    unsigned short            us = 0;
 
     if (pool == NULL || ja3 == NULL || out == NULL) {
         return;
@@ -229,12 +230,18 @@ ngx_ssl_ja3_fp(ngx_pool_t *pool, ngx_ssl_ja3_t *ja3, ngx_str_t *out)
 
     if (ja3->ciphers_sz) {
         for (size_t i = 0; i < ja3->ciphers_sz; ++i) {
-            if (i > 0) {
-                ngx_snprintf(out->data + (cur++), 1, "-");
+            us = ntohs(ja3->ciphers[i]);
+            if (!ngx_ssl_ja3_is_ext_greased(us)) {
+                if (added > 0) {
+                    ngx_snprintf(out->data + (cur++), 1, "-");
+                }
+                len = ngx_ssj_ja3_num_digits(us);
+                ngx_snprintf(out->data + cur, len, "%d", us);
+                cur += len;
+                if (added == 0) {
+                    added = 1;
+                }
             }
-            len = ngx_ssj_ja3_num_digits(ja3->ciphers[i]);
-            ngx_snprintf(out->data + cur, len, "%d", ja3->ciphers[i]);
-            cur += len;
         }
     }
     ngx_snprintf(out->data + (cur++), 1, ",");
@@ -297,6 +304,7 @@ ngx_ssl_ja3(ngx_connection_t *c, ngx_pool_t *pool, ngx_ssl_ja3_t *ja3) {
     int                           *curves_out = NULL;
     int                           *point_formats_out = NULL;
     size_t                         len = 0;
+    unsigned short                 us = 0;
 
     if (! c->ssl) {
         return NGX_DECLINED;
@@ -330,13 +338,7 @@ ngx_ssl_ja3(ngx_connection_t *c, ngx_pool_t *pool, ngx_ssl_ja3_t *ja3) {
         if (ja3->ciphers == NULL) {
             return NGX_DECLINED;
         }
-
         ngx_memcpy(ja3->ciphers, ciphers_out, len);
-#if NGX_HAVE_LITTLE_ENDIAN
-        for (size_t i = 0; i < ja3->ciphers_sz; ++i) {
-            ja3->ciphers[i] = (ja3->ciphers[i] >> 8) | (ja3->ciphers[i] << 8);
-        }
-#endif
     }
 
     /* Extensions */
@@ -349,7 +351,8 @@ ngx_ssl_ja3(ngx_connection_t *c, ngx_pool_t *pool, ngx_ssl_ja3_t *ja3) {
             return NGX_DECLINED;
         }
         for (size_t i = 0; i < c->ssl->client_extensions_size; ++i) {
-            if (! ngx_ssl_ja3_is_ext_greased(c->ssl->client_extensions[i])) {
+            us = ntohs(c->ssl->client_extensions[i]);
+            if (! ngx_ssl_ja3_is_ext_greased(us)) {
                 ja3->extensions[ja3->extensions_sz++] =
                     c->ssl->client_extensions[i];
             }

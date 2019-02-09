@@ -334,7 +334,7 @@ ngx_ssl_ja3(ngx_connection_t *c, ngx_pool_t *pool, ngx_ssl_ja3_t *ja3) {
         ngx_memcpy(ja3->ciphers, ciphers_out, len);
 #if NGX_HAVE_LITTLE_ENDIAN
         for (size_t i = 0; i < ja3->ciphers_sz; ++i) {
-            ja3->ciphers[i] >>=8;
+            ja3->ciphers[i] = (ja3->ciphers[i] >> 8) | (ja3->ciphers[i] << 8);
         }
 #endif
     }

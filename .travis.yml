@@ -1,5 +1,5 @@
 sudo: required
-dist: trusty
+dist: bionic
 
 os: linux
 
@@ -19,10 +19,10 @@ env:
     - PATH=$PATH:$NGINX_PREFIX/sbin
 
 before_install:
-  - sudo apt-get install -qq -y software-properties-common
+  - sudo apt install -qq -y software-properties-common
   - sudo add-apt-repository "deb http://us.archive.ubuntu.com/ubuntu/ xenial main universe"
-  - sudo apt-get update -qq -y --fix-missing
-  - sudo apt-get install -qq -y --fix-missing cpanminus mercurial build-essential make clang valgrind libio-socket-ssl-perl
+  - sudo apt update -qq -y --fix-missing
+  - sudo apt install -qq -y --fix-missing cpanminus mercurial build-essential make clang valgrind libio-socket-ssl-perl
 
 install:
   - if [ ! -d /opt ]; then mkdir /opt; fi

@@ -36,9 +36,9 @@ script:
   - make -j$JOBS > build.log 2>&1 || (cat build.log && exit 1)
   - sudo make install > build.log 2>&1 || (cat build.log && exit 1)
   - cd ..
-  - cp -v docker/debian-nginx-ssl-ja3/nginx.ssl.extensions.patch nginx/.
+  - cp -v docker/debian-nginx-ssl-ja3/nginx.1.15.9.ssl.extensions.patch nginx/.
   - cd nginx
-  - patch -p1 < nginx.ssl.extensions.patch
+  - patch -p1 < nginx.1.15.9.ssl.extensions.patch
   - auto/configure --with-debug --with-stream --with-ld-opt="-Wl,-E -L /usr/local/lib" --prefix=$NGINX_PREFIX  --with-http_ssl_module --with-stream_ssl_module --add-module=.. > build.log 2>&1 || (cat build.log && exit 1)
   - make -j$JOBS > build.log 2>&1 || (cat build.log && exit 1)
   - sudo make install > build.log 2>&1 || (cat build.log && exit 1)

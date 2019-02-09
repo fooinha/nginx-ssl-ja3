@@ -80,9 +80,8 @@ RUN hg clone http://hg.nginx.org/nginx
 
 # Patch nginx for fetching ssl client extensions
 WORKDIR /build/nginx
-COPY nginx.ssl.extensions.patch /build/nginx
-RUN cat nginx.ssl.extensions.patch
-RUN patch -p1 < nginx.ssl.extensions.patch
+COPY nginx.1.15.9.ssl.extensions.patch /build/nginx
+RUN patch -p1 < nginx.1.15.9.ssl.extensions.patch
 
 # Configure, make and install
 RUN ./auto/configure --add-module=/build/nginx-ssl-ja3 --with-http_ssl_module --with-stream_ssl_module --with-stream --with-debug --with-ld-opt="-L/usr/local/lib -Wl,-E"

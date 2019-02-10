@@ -92,7 +92,7 @@ static const int nid_list[] = {
 };
 
 
-static unsigned char
+static unsigned short
 ngx_ssl_ja3_nid_to_cid(int nid)
 {
     unsigned char sz = (sizeof(nid_list) / sizeof(nid_list[0]));
@@ -102,7 +102,8 @@ ngx_ssl_ja3_nid_to_cid(int nid)
             return i+1;
         }
     }
-    return 0;
+
+    return nid;
 }
 
 static size_t
@@ -369,7 +370,7 @@ ngx_ssl_ja3(ngx_connection_t *c, ngx_pool_t *pool, ngx_ssl_ja3_t *ja3) {
 
         SSL_get1_curves(ssl, curves_out);
 
-        len = ja3->curves_sz * sizeof(unsigned char);
+        len = ja3->curves_sz * sizeof(unsigned short);
         ja3->curves = ngx_pnalloc(pool, len);
         if (ja3->curves == NULL) {
             return NGX_DECLINED;

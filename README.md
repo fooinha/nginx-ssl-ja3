@@ -85,7 +85,7 @@ the patch is already applied. Check the Dockerfile of the dev image.
 
 ### Patches
 
- - [save Client Hello extensions at nginx's SSL connection](docker/debian-nginx-ssl-ja3/nginx.ssl.extensions.patch)
+ - [save Client Hello extensions at nginx's SSL connection](patches/latest.patch)
 
 
 ### Compilation and installation

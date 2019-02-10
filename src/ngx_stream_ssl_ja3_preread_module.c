@@ -109,12 +109,42 @@ ngx_stream_ssl_ja3_hash(ngx_stream_session_t *s,
     return NGX_OK;
 }
 
+static ngx_int_t
+ngx_stream_ssl_ja3(ngx_stream_session_t *s,
+        ngx_stream_variable_value_t *v, uintptr_t data)
+{
+    ngx_ssl_ja3_t                  ja3;
+    ngx_str_t                      fp = ngx_null_string;
+
+    if (s->connection == NULL) {
+        return NGX_OK;
+    }
+
+    if (ngx_ssl_ja3(s->connection, s->connection->pool, &ja3) == NGX_DECLINED) {
+        return NGX_ERROR;
+    }
+    ngx_ssl_ja3_fp(s->connection->pool, &ja3, &fp);
+
+    v->data = fp.data;
+    v->len = fp.len;
+    v->valid = 1;
+    v->no_cacheable = 1;
+    v->not_found = 0;
+
+    return NGX_OK;
+}
+
 
 static ngx_stream_variable_t  ngx_stream_ssl_ja3_variables_list[] = {
 
     {   ngx_string("stream_ssl_ja3_hash"),
         NULL,
         ngx_stream_ssl_ja3_hash,
+        0, 0, 0
+    },
+    {   ngx_string("stream_ssl_ja3"),
+        NULL,
+        ngx_stream_ssl_ja3,
         0, 0, 0
     },
 

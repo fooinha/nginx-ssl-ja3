@@ -1,26 +1,15 @@
 version: '3'
 
-
 services:
 
-#    nginx:
-#        build: ./alpine-nginx-ssl-ja3
-#        hostname: nginx
-#        container_name: nginx-ssl-ja3
-#        ports:
-#          - "80:80"
-#        expose:
-#          - 80
-#        network_mode: bridge
-#        tty: true
-#        privileged: true
-#        cap_add:
-#          - ALL
-
     nginx-dev:
-        build: ./debian-nginx-ssl-ja3
+        build:
+            context: ../
+            dockerfile: docker/debian-nginx-ssl-ja3/Dockerfile
         hostname: nginx-dev
         container_name: nginx-ssl-ja3
+        volumes:
+            - ../:/build/nginx-ssl-ja3
         ports:
           - "443:443"
         expose:

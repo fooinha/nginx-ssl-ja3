@@ -16,6 +16,14 @@ No directives yet.
 
 ### Variables
 
+#### $http_ssl_ja3
+
+The ja3 fingerprint string for a SSL connection for a HTTP server.
+
+```
+771,4865-4866-4867-49195-49199-49196-49200-52393-52392-49171-49172-156-157-47-53-10,0-23-65281-10-11-35-16-5-13-18-51-45-43-21,0-29-23-24,0
+```
+
 #### $http_ssl_ja3_hash
 
 The ja3 fingerprint MD5 hash for a SSL connection for a HTTP server.
@@ -29,10 +37,14 @@ http {
         ssl_certificate        cert.pem;
         ssl_certificate_key    rsa.key;
         error_log              /dev/stderr debug;
-        return                 200 "$time_iso8601-$http_ssl_ja3_hash\n";
+        return                 200 "$time_iso8601\n\n$http_user_agent\n\n$http_ssl_ja3\n\n$http_ssl_ja3_hash\n";
     }
 }
 ```
+
+#### $stream_ssl_ja3
+
+The ja3 fingerprint string for a SSL connection for a stream server.
 
 #### $stream_ssl_ja3_hash
 
@@ -47,7 +59,7 @@ stream {
         ssl_certificate        cert.pem;
         ssl_certificate_key    rsa.key;
         error_log              /dev/stderr debug;
-        return                 "$time_iso8601-$stream_ssl_ja3_hash\n";
+        return                 "$time_iso8601\n\n$stream_ssl_ja3\n\n$stream_ssl_ja3_hash\n";
     }
 }
 ```

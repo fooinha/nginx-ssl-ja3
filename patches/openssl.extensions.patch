@@ -1,0 +1,42 @@
+diff -r -u openssl.orig/include/openssl/tls1.h openssl/include/openssl/tls1.h
+--- openssl.orig/include/openssl/tls1.h	2019-02-12 23:44:30.004081000 +0000
++++ openssl/include/openssl/tls1.h	2019-02-12 23:51:42.213326000 +0000
+@@ -133,6 +133,11 @@
+ /* ExtensionType value from RFC7627 */
+ # define TLSEXT_TYPE_extended_master_secret      23
+ 
++/* [draft-ietf-tls-certificate-compression] */
++# define TLSEXT_TYPE_compress_certificate        27
++/* ExtensionType value from RFC8449 */
++# define TLSEXT_TYPE_record_size_limit           28
++
+ /* ExtensionType value from RFC4507 */
+ # define TLSEXT_TYPE_session_ticket              35
+ 
+Only in openssl/ssl/statem: .extensions.c.swp
+diff -r -u openssl.orig/ssl/statem/extensions.c openssl/ssl/statem/extensions.c
+--- openssl.orig/ssl/statem/extensions.c	2019-02-12 23:48:29.687608000 +0000
++++ openssl/ssl/statem/extensions.c	2019-02-12 23:45:46.161153000 +0000
+@@ -374,6 +374,22 @@
+         tls_construct_certificate_authorities, NULL,
+     },
+     {
++        TLSEXT_TYPE_compress_certificate,
++        SSL_EXT_CLIENT_HELLO,
++        NULL,
++        NULL, NULL,
++        NULL,
++        NULL, NULL,
++    },
++    {
++        TLSEXT_TYPE_record_size_limit,
++        SSL_EXT_CLIENT_HELLO,
++        NULL,
++        NULL, NULL,
++        NULL,
++        NULL, NULL,
++    },
++    {
+         /* Must be immediately before pre_shared_key */
+         TLSEXT_TYPE_padding,
+         SSL_EXT_CLIENT_HELLO,

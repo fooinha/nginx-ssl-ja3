@@ -85,7 +85,8 @@ the patch is already applied. Check the Dockerfile of the dev image.
 
 ### Patches
 
- - [save Client Hello extensions at nginx's SSL connection](patches/latest.patch)
+ - [nginx - save client hello extensions](patches/nginx.latest.patch)
+ - [openssl - more tls extensions](patches/openssl.extensions.patch)
 
 
 ### Compilation and installation
@@ -94,9 +95,17 @@ Build as a common nginx module.
 
 ```bash
 
+# Hack/patch openssl - to include more common extensions
+
+$ patch  -p1 < /build/nginx-ssl-ja3/patches/openssl.extensions.patch
+
+patching file include/openssl/tls1.h
+patching file ssl/statem/extensions.c
+
+
 # Hack/patch nginx
 
-$ patch -p1 < /build/ngx_ssl_ja3/patches/latest.patch
+$ patch -p1 < /build/ngx_ssl_ja3/patches/nginx.latest.patch
 
 patching file src/event/ngx_event_openssl.c
 Hunk #1 succeeded at 1358 (offset 137 lines).

@@ -64,6 +64,10 @@ RUN git clone https://github.com/openssl/openssl
 
 # Build and install openssl
 WORKDIR /build/openssl
+
+RUN git checkout OpenSSL_1_1_1 -b patched
+COPY patches/openssl.extensions.patch /build/openssl
+RUN patch -p1 < openssl.extensions.patch
 RUN ./config -d
 RUN make
 RUN make install
@@ -74,8 +78,8 @@ RUN hg clone http://hg.nginx.org/nginx
 
 # Patch nginx for fetching ssl client extensions
 WORKDIR /build/nginx
-COPY patches/latest.patch /build/nginx
-RUN patch -p1 < latest.patch
+COPY patches/nginx.latest.patch /build/nginx
+RUN patch -p1 < nginx.latest.patch
 
 # Install files
 RUN mkdir -p /usr/local/nginx/conf/

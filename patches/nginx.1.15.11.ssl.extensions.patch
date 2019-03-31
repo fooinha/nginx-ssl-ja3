@@ -1,7 +1,7 @@
 diff -r -u ./src/event/ngx_event_openssl.c ../../nginx/src/event/ngx_event_openssl.c
 --- ./src/event/ngx_event_openssl.c	2019-03-31 22:24:03.317031000 +0000
-+++ ../../nginx/src/event/ngx_event_openssl.c	2019-03-31 22:29:05.000000000 +0000
-@@ -1599,6 +1599,117 @@
++++ ../../nginx/src/event/ngx_event_openssl.c	2019-03-31 22:42:48.245122000 +0000
+@@ -1599,6 +1599,109 @@
      return NGX_OK;
  }
  
@@ -63,7 +63,6 @@ diff -r -u ./src/event/ngx_event_openssl.c ../../nginx/src/event/ngx_event_opens
 +    }
 +}
 +
-+
 +/* should *ALWAYS return 1
 + * # define SSL_CLIENT_HELLO_SUCCESS 1
 + *
@@ -88,12 +87,8 @@ diff -r -u ./src/event/ngx_event_openssl.c ../../nginx/src/event/ngx_event_opens
 +        return 1;
 +    }
 +
-+    c->ssl->version = SSL_version(s);
-+
-+
 +    c->ssl->extensions_size = 0;
 +    c->ssl->extensions = NULL;
-+
 +    got_extensions = SSL_client_hello_get1_extensions_present(s,
 +                                                       &ext_out,
 +                                                       &ext_len);
@@ -109,17 +104,14 @@ diff -r -u ./src/event/ngx_event_openssl.c ../../nginx/src/event/ngx_event_opens
 +        }
 +    }
 +
-+
 +    return 1;
 +}
 +#endif
 +/* ----- JA3 HACK END -------------------------------------------------------*/
-+
-+
  
  ngx_int_t
  ngx_ssl_handshake(ngx_connection_t *c)
-@@ -1614,6 +1725,10 @@
+@@ -1614,6 +1717,10 @@
  
      ngx_ssl_clear_error(c->log);
  
@@ -130,7 +122,7 @@ diff -r -u ./src/event/ngx_event_openssl.c ../../nginx/src/event/ngx_event_opens
      n = SSL_do_handshake(c->ssl->connection);
  
      ngx_log_debug1(NGX_LOG_DEBUG_EVENT, c->log, 0, "SSL_do_handshake: %d", n);
-@@ -1634,6 +1749,12 @@
+@@ -1634,6 +1741,12 @@
  
          c->ssl->handshaked = 1;
  

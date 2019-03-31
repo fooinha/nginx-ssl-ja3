@@ -134,8 +134,9 @@ ngx_ssl_ja3_detail_print(ngx_pool_t *pool, ngx_ssl_ja3_t *ja3)
                    ja3->ciphers_sz);
 
     for (size_t i = 0; i < ja3->ciphers_sz; ++i) {
-        ngx_log_debug1(NGX_LOG_DEBUG_EVENT,
-                       pool->log, 0, "ssl_ja3: |    cipher: %d",
+        ngx_log_debug2(NGX_LOG_DEBUG_EVENT,
+                       pool->log, 0, "ssl_ja3: |    cipher: 0x%04uxD -> %d",
+                       ja3->ciphers[i],
                        ja3->ciphers[i]
         );
     }
@@ -146,8 +147,9 @@ ngx_ssl_ja3_detail_print(ngx_pool_t *pool, ngx_ssl_ja3_t *ja3)
                    ja3->extensions_sz);
 
     for (size_t i = 0; i < ja3->extensions_sz; ++i) {
-        ngx_log_debug1(NGX_LOG_DEBUG_EVENT,
-                       pool->log, 0, "ssl_ja3: |    extension: %d",
+        ngx_log_debug2(NGX_LOG_DEBUG_EVENT,
+                       pool->log, 0, "ssl_ja3: |    extension: 0x%04uxD -> %d",
+                       ja3->extensions[i],
                        ja3->extensions[i]
         );
     }
@@ -158,8 +160,9 @@ ngx_ssl_ja3_detail_print(ngx_pool_t *pool, ngx_ssl_ja3_t *ja3)
                    ja3->curves_sz);
 
     for (size_t i = 0; i < ja3->curves_sz; ++i) {
-        ngx_log_debug1(NGX_LOG_DEBUG_EVENT,
-                       pool->log, 0, "ssl_ja3: |    curves: %d",
+        ngx_log_debug2(NGX_LOG_DEBUG_EVENT,
+                       pool->log, 0, "ssl_ja3: |    curves: 0x%04uxD -> %d",
+                       ja3->curves[i],
                        ja3->curves[i]
         );
     }
@@ -181,8 +184,7 @@ ngx_ssl_ja3_detail_print(ngx_pool_t *pool, ngx_ssl_ja3_t *ja3)
 void
 ngx_ssl_ja3_fp(ngx_pool_t *pool, ngx_ssl_ja3_t *ja3, ngx_str_t *out)
 {
-    size_t                    len = 0, cur = 0, added = 0;
-    unsigned short            us = 0;
+    size_t                    len = 0, cur = 0;
 
     if (pool == NULL || ja3 == NULL || out == NULL) {
         return;
@@ -231,18 +233,12 @@ ngx_ssl_ja3_fp(ngx_pool_t *pool, ngx_ssl_ja3_t *ja3, ngx_str_t *out)
 
     if (ja3->ciphers_sz) {
         for (size_t i = 0; i < ja3->ciphers_sz; ++i) {
-            us = ntohs(ja3->ciphers[i]);
-            if (!ngx_ssl_ja3_is_ext_greased(us)) {
-                if (added > 0) {
-                    ngx_snprintf(out->data + (cur++), 1, "-");
-                }
-                len = ngx_ssj_ja3_num_digits(us);
-                ngx_snprintf(out->data + cur, len, "%d", us);
-                cur += len;
-                if (added == 0) {
-                    added = 1;
-                }
+            if (i > 0) {
+                ngx_snprintf(out->data + (cur++), 1, "-");
             }
+            len = ngx_ssj_ja3_num_digits(ja3->ciphers[i]);
+            ngx_snprintf(out->data + cur, len, "%d", ja3->ciphers[i]);
+            cur += len;
         }
     }
     ngx_snprintf(out->data + (cur++), 1, ",");
@@ -301,9 +297,6 @@ ngx_ssl_ja3(ngx_connection_t *c, ngx_pool_t *pool, ngx_ssl_ja3_t *ja3) {
 
     ngx_ssl_session_t             *ssl_session;
     SSL                           *ssl;
-    unsigned short                *ciphers_out = NULL;
-    int                           *curves_out = NULL;
-    int                           *point_formats_out = NULL;
     size_t                         len = 0;
     unsigned short                 us = 0;
 
@@ -330,71 +323,59 @@ ngx_ssl_ja3(ngx_connection_t *c, ngx_pool_t *pool, ngx_ssl_ja3_t *ja3) {
 
     /* Cipher suites */
     ja3->ciphers = NULL;
-    ja3->ciphers_sz = SSL_get0_raw_cipherlist(ssl, &ciphers_out);
-    ja3->ciphers_sz /= 2;
+    ja3->ciphers_sz = 0;
 
-    if (ja3->ciphers_sz && ciphers_out) {
-        len = ja3->ciphers_sz * sizeof(unsigned short);
+    if (c->ssl->ciphers && c->ssl->ciphers_sz) {
+        len = c->ssl->ciphers_sz * sizeof(unsigned short);
         ja3->ciphers = ngx_pnalloc(pool, len);
         if (ja3->ciphers == NULL) {
             return NGX_DECLINED;
         }
-        ngx_memcpy(ja3->ciphers, ciphers_out, len);
+        /* Filter out GREASE extensions */
+        for (size_t i = 0; i < c->ssl->ciphers_sz; ++i) {
+            us = ntohs(c->ssl->ciphers[i]);
+            if (! ngx_ssl_ja3_is_ext_greased(us)) {
+                ja3->ciphers[ja3->ciphers_sz++] = us;
+            }
+        }
     }
 
     /* Extensions */
     ja3->extensions = NULL;
     ja3->extensions_sz = 0;
-    if (c->ssl->client_extensions_size && c->ssl->client_extensions) {
-        len = c->ssl->client_extensions_size * sizeof(int);
+    if (c->ssl->extensions_size && c->ssl->extensions) {
+        len = c->ssl->extensions_size * sizeof(int);
         ja3->extensions = ngx_pnalloc(pool, len);
         if (ja3->extensions == NULL) {
             return NGX_DECLINED;
         }
-        for (size_t i = 0; i < c->ssl->client_extensions_size; ++i) {
-            us = ntohs(c->ssl->client_extensions[i]);
-            if (! ngx_ssl_ja3_is_ext_greased(us)) {
-                ja3->extensions[ja3->extensions_sz++] =
-                    c->ssl->client_extensions[i];
+        for (size_t i = 0; i < c->ssl->extensions_size; ++i) {
+            if (! ngx_ssl_ja3_is_ext_greased(c->ssl->extensions[i])) {
+                ja3->extensions[ja3->extensions_sz++] = c->ssl->extensions[i];
             }
         }
     }
 
     /* Elliptic curve points */
-    ja3->curves_sz = SSL_get1_curves(ssl, NULL);
-    if (ja3->curves_sz) {
-        curves_out = OPENSSL_malloc(ja3->curves_sz * sizeof(int));
-        if (curves_out == NULL) {
-            return NGX_DECLINED;
-        }
-
-        SSL_get1_curves(ssl, curves_out);
-
-        len = ja3->curves_sz * sizeof(unsigned short);
+    ja3->curves = c->ssl->curves;
+    ja3->curves_sz = 0;
+    if (c->ssl->curves && c->ssl->curves_sz) {
+        len = c->ssl->curves_sz * sizeof(int);
         ja3->curves = ngx_pnalloc(pool, len);
         if (ja3->curves == NULL) {
             return NGX_DECLINED;
         }
-        for (size_t i = 0; i < ja3->curves_sz; i++) {
-            ja3->curves[i] = ngx_ssl_ja3_nid_to_cid(curves_out[i]);
-        }
-
-        if (curves_out) {
-            OPENSSL_free(curves_out);
+        for (size_t i = 0; i < c->ssl->curves_sz; i++) {
+            us = ntohs(c->ssl->curves[i]);
+            if (! ngx_ssl_ja3_is_ext_greased(us)) {
+                ja3->curves[ja3->curves_sz++] = ngx_ssl_ja3_nid_to_cid(c->ssl->curves[i]);
+            }
         }
     }
 
     /* Elliptic curve point formats */
-    ja3->point_formats_sz = SSL_get0_ec_point_formats(ssl, &point_formats_out);
-    if (ja3->point_formats_sz && point_formats_out != NULL) {
-
-        len = ja3->point_formats_sz * sizeof(unsigned char);
-        ja3->point_formats = ngx_pnalloc(pool, len);
-        if (ja3->point_formats == NULL) {
-            return NGX_DECLINED;
-        }
-        ngx_memcpy(ja3->point_formats, point_formats_out, len);
-    }
+    ja3->point_formats_sz = c->ssl->point_formats_sz;
+    ja3->point_formats = c->ssl->point_formats;
 
     return NGX_OK;
 }

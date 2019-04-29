@@ -1,0 +1,25 @@
+version: '3.7'
+
+services:
+    nginx:
+        image: 'nginx-ja3'
+        build: .
+        ports:
+          - '443:443'
+        volumes:
+          - ./nginx/nginx.conf:/usr/local/nginx/conf/nginx.conf
+    openresty:
+        image: openresty/openresty
+        volumes:
+          - ./openresty/lua:/lua
+          - ./openresty/nginx.conf:/usr/local/openresty/nginx/conf/nginx.conf
+        ports:
+          - 8080:80
+    redis:
+        image: redis
+        ports:
+          - 6379:6379
+    redis-browser:
+      image: marian/rebrow
+      ports:
+        - 5001:5001

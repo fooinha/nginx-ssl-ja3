@@ -133,14 +133,27 @@ $ TEST_NGINX_BINARY=/usr/local/nginx/sbin/nginx prove -v
 
 ## Docker
 
-Docker images and a docker compose file is available at the ./docker directory.
+You can start the entire stack using docker-compose:
+
 
 ```
-$ docker-compose up --build -d
+$ docker-compose up --build
 
-Creating nginx-ssl-ja3
+Creating nginx-ja3
 
 ```
+
+The stack is structured in the folllowing way:
+
+---------------          ---------------------------          ---------          -------------
+| JA3 - NGINX | -------> | OPENRESTY (LUA SUPPORT) | -------> | REDIS | -------> | REDIS GUI |
+---------------          ---------------------------          ---------          -------------
+
+The first Nginx server captures the ja3 fingerprint of the client for each SSL request, it sets two headers
+containing the ja3 hash and the ua. These headers are received and processed by openresty which uses lua to access 
+and write the captured data on redis.
+
+Currently we use an off-the-shelf redis gui to present the data, I am considering the idea to develop an ad-hoc interface.
 
 ## Fair Warning
 

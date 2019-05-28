@@ -260,13 +260,20 @@ ngx_ssl_ja3_fp(ngx_pool_t *pool, ngx_ssl_ja3_t *ja3, ngx_str_t *out)
     ngx_snprintf(out->data + (cur++), 1, ",");
 
     if (ja3->curves_sz) {
+        added = 0;
         for (size_t i = 0; i < ja3->curves_sz; i++) {
-            if (i > 0) {
-                ngx_snprintf(out->data + (cur++), 1, "-");
+            us = ntohs(ja3->curves[i]);
+            if (!ngx_ssl_ja3_is_ext_greased(us)) {
+                if (added > 0) {
+                    ngx_snprintf(out->data + (cur++), 1, "-");
+                }
+                len = ngx_ssj_ja3_num_digits(ja3->curves[i]);
+                ngx_snprintf(out->data + cur, len, "%d", ja3->curves[i]);
+                cur += len;
+                if (added == 0) {
+                    added = 1;
+                }
             }
-            len = ngx_ssj_ja3_num_digits(ja3->curves[i]);
-            ngx_snprintf(out->data + cur, len, "%d", ja3->curves[i]);
-            cur += len;
         }
     }
     ngx_snprintf(out->data + (cur++), 1, ",");
@@ -373,15 +380,14 @@ ngx_ssl_ja3(ngx_connection_t *c, ngx_pool_t *pool, ngx_ssl_ja3_t *ja3) {
         len = ja3->curves_sz * sizeof(unsigned short);
         ja3->curves = ngx_pnalloc(pool, len);
         if (ja3->curves == NULL) {
+            OPENSSL_free(curves_out);
             return NGX_DECLINED;
         }
         for (size_t i = 0; i < ja3->curves_sz; i++) {
             ja3->curves[i] = ngx_ssl_ja3_nid_to_cid(curves_out[i]);
         }
 
-        if (curves_out) {
-            OPENSSL_free(curves_out);
-        }
+        OPENSSL_free(curves_out);
     }
 
     /* Elliptic curve point formats */

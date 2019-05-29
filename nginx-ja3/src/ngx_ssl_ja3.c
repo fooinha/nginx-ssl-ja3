@@ -184,7 +184,8 @@ ngx_ssl_ja3_detail_print(ngx_pool_t *pool, ngx_ssl_ja3_t *ja3)
 void
 ngx_ssl_ja3_fp(ngx_pool_t *pool, ngx_ssl_ja3_t *ja3, ngx_str_t *out)
 {
-    size_t                    len = 0, cur = 0;
+    size_t len = 0, cur = 0, added = 0;
+    unsigned short us = 0;
 
     if (pool == NULL || ja3 == NULL || out == NULL) {
         return;
@@ -256,13 +257,21 @@ ngx_ssl_ja3_fp(ngx_pool_t *pool, ngx_ssl_ja3_t *ja3, ngx_str_t *out)
     ngx_snprintf(out->data + (cur++), 1, ",");
 
     if (ja3->curves_sz) {
+        added = 0;
         for (size_t i = 0; i < ja3->curves_sz; i++) {
-            if (i > 0) {
-                ngx_snprintf(out->data + (cur++), 1, "-");
+            us = ntohs(ja3->curves[i]);
+            if (!ngx_ssl_ja3_is_ext_greased(us)) {
+                if (added > 0) {
+                    ngx_snprintf(out->data + (cur++), 1, "-");
+                }
+                len = ngx_ssj_ja3_num_digits(ja3->curves[i]);
+                ngx_snprintf(out->data + cur, len, "%d", ja3->curves[i]);
+                cur += len;
+
+                if (added == 0) {
+                    added = 1;
+                }
             }
-            len = ngx_ssj_ja3_num_digits(ja3->curves[i]);
-            ngx_snprintf(out->data + cur, len, "%d", ja3->curves[i]);
-            cur += len;
         }
     }
     ngx_snprintf(out->data + (cur++), 1, ",");
@@ -299,6 +308,7 @@ ngx_ssl_ja3(ngx_connection_t *c, ngx_pool_t *pool, ngx_ssl_ja3_t *ja3) {
     SSL                           *ssl;
     size_t                         len = 0;
     unsigned short                 us = 0;
+    unsigned short                 alternate = 1;
 
     if (! c->ssl) {
         return NGX_DECLINED;
@@ -344,14 +354,20 @@ ngx_ssl_ja3(ngx_connection_t *c, ngx_pool_t *pool, ngx_ssl_ja3_t *ja3) {
     ja3->extensions = NULL;
     ja3->extensions_sz = 0;
     if (c->ssl->extensions_size && c->ssl->extensions) {
-        len = c->ssl->extensions_size * sizeof(int);
+        len = c->ssl->extensions_size * sizeof(int) * 2;
         ja3->extensions = ngx_pnalloc(pool, len);
         if (ja3->extensions == NULL) {
             return NGX_DECLINED;
         }
         for (size_t i = 0; i < c->ssl->extensions_size; ++i) {
-            if (! ngx_ssl_ja3_is_ext_greased(c->ssl->extensions[i])) {
+            if (! ngx_ssl_ja3_is_ext_greased(c->ssl->extensions[i]) && alternate) {
                 ja3->extensions[ja3->extensions_sz++] = c->ssl->extensions[i];
+            }
+
+            if (alternate) {
+                alternate = 0;
+            } else {
+                alternate = 1;
             }
         }
     }

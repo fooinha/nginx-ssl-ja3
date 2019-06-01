@@ -142,6 +142,16 @@ Creating nginx-ssl-ja3
 
 ```
 
+
+
+## Contributors
+
+@**fooinha**  - author
+
+@**Sessa93**
+
+@**bartebor**
+
 ## Fair Warning
 
 **THIS IS NOT PRODUCTION** ready.

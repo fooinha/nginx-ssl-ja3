@@ -295,7 +295,6 @@ ngx_ssl_ja3_fp(ngx_pool_t *pool, ngx_ssl_ja3_t *ja3, ngx_str_t *out)
 int
 ngx_ssl_ja3(ngx_connection_t *c, ngx_pool_t *pool, ngx_ssl_ja3_t *ja3) {
 
-    ngx_ssl_session_t             *ssl_session;
     SSL                           *ssl;
     size_t                         len = 0;
     unsigned short                 us = 0;
@@ -305,11 +304,6 @@ ngx_ssl_ja3(ngx_connection_t *c, ngx_pool_t *pool, ngx_ssl_ja3_t *ja3) {
     }
 
     if (! c->ssl->handshaked) {
-        return NGX_DECLINED;
-    }
-
-    ssl_session = ngx_ssl_get_session(c);
-    if (! ssl_session) {
         return NGX_DECLINED;
     }
 

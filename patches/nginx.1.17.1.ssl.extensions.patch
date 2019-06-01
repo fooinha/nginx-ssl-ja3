@@ -148,7 +148,7 @@ diff -r d964b0aee8e7 src/event/ngx_event_openssl.h
 +    unsigned short             *ciphers;
 +
 +    size_t                      extensions_size;
-+    unsigned short             *extensions;
++    int                        *extensions;
 +
 +    size_t                      curves_sz;
 +    unsigned short             *curves;

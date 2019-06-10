@@ -1,11 +1,33 @@
+Changes nginx-ssl-ja3 v0.0.2                                        3 Jun  2019
+
+ nginx-ssl-ja3: nginx variables for ja3 fingerprint
+ - nginx modules
+     - features for ja3 are capture once on connection setup in nginx event openssl code
+     - fixes grease values being included in eliptic curves values
+     - patches OpenSSL to include some extra client extensions
+         - extended_master_secret -> 23
+         - compress_certificate -> 27
+         - record_size_limit -> 28
+         - session_ticket -> 35
+     - fixes memory leak with unused ssl_session
+ - tests
+     - integration tests with t/http_ssl_ja3.t
+ - documentation
+     - better documentation how to build and setup
+ - docker
+     - better Dockerfile - no need of git checkout
+ - travis
+     - upgrade to ubuntu bionic
+
+
 Changes with nginx-ssl-ja3 0.0.1                                   20 Aug  2017
 
-    *) nginx modules
-      *) config
-      *) http_ssl_ja3_hash variable
-      *) stream_ssl_ja3_hash variable
-    *) docker
-      *) dockerfiles
-      *) compose
-    *) travis
-
+ nginx-ssl-ja3: nginx variables for ja3 fingerprint
+ - nginx modules
+   - config
+   - $http_ssl_ja3_hash variable
+   - $stream_ssl_ja3_hash variable
+ - docker
+   - dockerfiles
+   - compose
+ - travis

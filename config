@@ -26,21 +26,33 @@ NGX_ADDON_SRCS="$NGX_ADDON_SRCS                         \
 
 CORE_LIBS="$CORE_LIBS"
 
-#
-# OpenSSL 1.1.1 with SSL_CTX_set_client_hello_cb
-#
-ngx_feature="SSL_CTX_set_client_hello_cb()"
-ngx_feature_name="NGX_HAVE_OPENSSL_SSL_CLIENT_HELLO_CB"
-ngx_feature_run=no
-ngx_feature_incs="#include <openssl/ssl.h>"
-ngx_feature_path=
-ngx_feature_libs="-lssl $NGX_LD_OPT"
-ngx_feature_test="SSL_CTX_set_client_hello_cb(0, 0, 0);"
-. auto/feature
+case $OPENSSL in
+    YES)
+      echo " + ngx_ssl_ja3: using system OpenSSL library"
+      #
+      # OpenSSL 1.1.1 with SSL_CTX_set_client_hello_cb
+      #
+      ngx_feature="SSL_CTX_set_client_hello_cb()"
+      ngx_feature_name="NGX_HAVE_OPENSSL_SSL_CLIENT_HELLO_CB"
+      ngx_feature_run=no
+      ngx_feature_incs="#include <openssl/ssl.h>"
+      ngx_feature_path=
+      ngx_feature_libs="-lssl $NGX_LD_OPT"
+      ngx_feature_test="SSL_CTX_set_client_hello_cb(0, 0, 0);"
+      . auto/feature
 
-if [ $ngx_found = no ]; then
-    echo " ! incorrect OpenSSL version. use >= 1.1.1"
-    exit 1
-fi
+      if [ $ngx_found = no ]; then
+         echo " ! incorrect OpenSSL version. use >= 1.1.1"
+         exit 1
+      fi
+      ;;
 
+    NONE)
+      echo " ! ngx_ssl_ja3: OpenSSL library is not used"
+      exit 1
+      ;;
+    *)
+      echo " + ngx_ssl_ja3: using OpenSSL library: $OPENSSL"
+      ;;
+esac
 

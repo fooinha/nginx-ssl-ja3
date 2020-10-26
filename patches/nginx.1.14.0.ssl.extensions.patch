@@ -1,19 +1,79 @@
-diff -r 2e8de3d81783 src/event/ngx_event_openssl.c
---- a/src/event/ngx_event_openssl.c	Tue Aug 22 17:36:12 2017 +0300
-+++ b/src/event/ngx_event_openssl.c	Tue Aug 22 20:20:30 2017 +0000
-@@ -1221,6 +1221,60 @@
+diff -Naurp nginx-1.14.0.orig/src/event/ngx_event_openssl.c nginx-1.14.0/src/event/ngx_event_openssl.c
+--- nginx-1.14.0.orig/src/event/ngx_event_openssl.c	2018-04-17 18:22:36.000000000 +0300
++++ nginx-1.14.0/src/event/ngx_event_openssl.c	2020-10-26 21:08:09.110961786 +0300
+@@ -1220,6 +1220,107 @@ ngx_ssl_set_session(ngx_connection_t *c,
+     return NGX_OK;
  }
  
- 
++/* ----- JA3 HACK START -----------------------------------------------------*/
 +#if OPENSSL_VERSION_NUMBER >= 0x10101000L
 +
++void
++ngx_SSL_client_features(ngx_connection_t *c) {
++
++    unsigned short                *ciphers_out = NULL;
++    int                           *curves_out = NULL;
++    int                           *point_formats_out = NULL;
++    size_t                         len = 0;
++    SSL                           *s = NULL;
++
++    if (c == NULL) {
++        return;
++    }
++    s = c->ssl->connection;
++
++    /* Cipher suites */
++    c->ssl->ciphers = NULL;
++    c->ssl->ciphers_sz = SSL_get0_raw_cipherlist(s, &ciphers_out);
++    c->ssl->ciphers_sz /= 2;
++
++    if (c->ssl->ciphers_sz && ciphers_out) {
++        len = c->ssl->ciphers_sz * sizeof(unsigned short);
++        c->ssl->ciphers = ngx_pnalloc(c->pool, len);
++        ngx_memcpy(c->ssl->ciphers, ciphers_out, len);
++    }
++
++    /* Elliptic curve points */
++    c->ssl->curves_sz = SSL_get1_curves(s, NULL);
++    if (c->ssl->curves_sz) {
++        curves_out = OPENSSL_malloc(c->ssl->curves_sz * sizeof(int));
++        if (curves_out != NULL) {
++            SSL_get1_curves(s, curves_out);
++            len = c->ssl->curves_sz * sizeof(unsigned short);
++            c->ssl->curves = ngx_pnalloc(c->pool, len);
++            if (c->ssl->curves != NULL) {
++                for (size_t i = 0; i < c->ssl->curves_sz; i++) {
++                     c->ssl->curves[i] = curves_out[i];
++                }
++            }
++            OPENSSL_free(curves_out);
++        }
++    }
++
++    /* Elliptic curve point formats */
++    c->ssl->point_formats_sz = SSL_get0_ec_point_formats(s, &point_formats_out);
++    if (c->ssl->point_formats_sz && point_formats_out != NULL) {
++        len = c->ssl->point_formats_sz * sizeof(unsigned char);
++        c->ssl->point_formats = ngx_pnalloc(c->pool, len);
++        if (c->ssl->point_formats != NULL) {
++            ngx_memcpy(c->ssl->point_formats, point_formats_out, len);
++        }
++    }
++}
++
++/* should *ALWAYS return 1
++ * # define SSL_CLIENT_HELLO_SUCCESS 1
++ *
++ * otherwise
++ *   A failure in the ClientHello callback terminates the connection.
++ */
 +int
 +ngx_SSL_early_cb_fn(SSL *s, int *al, void *arg) {
 +
-+    int               got_extensions;
-+    int              *ext_out;
-+    size_t            ext_len;
-+    ngx_connection_t *c;
++    int                            got_extensions;
++    int                           *ext_out;
++    size_t                         ext_len;
++    ngx_connection_t              *c;
 +
 +    c = arg;
 +
@@ -25,44 +85,31 @@ diff -r 2e8de3d81783 src/event/ngx_event_openssl.c
 +        return 1;
 +    }
 +
-+    c->ssl->client_extensions_size = 0;
-+    c->ssl->client_extensions = NULL;
-+
++    c->ssl->extensions_size = 0;
++    c->ssl->extensions = NULL;
 +    got_extensions = SSL_client_hello_get1_extensions_present(s,
 +                                                       &ext_out,
 +                                                       &ext_len);
-+    if (!got_extensions) {
-+        return 1;
++    if (got_extensions) {
++        if (ext_out && ext_len) {
++            c->ssl->extensions =
++                ngx_palloc(c->pool, sizeof(int) * ext_len);
++            if (c->ssl->extensions != NULL) {
++                c->ssl->extensions_size = ext_len;
++                ngx_memcpy(c->ssl->extensions, ext_out, sizeof(int) * ext_len);
++                OPENSSL_free(ext_out);
++            }
++        }
 +    }
-+
-+    if (!ext_out) {
-+        return 1;
-+    }
-+
-+    if (!ext_len) {
-+        return 1;
-+    }
-+
-+    c->ssl->client_extensions = ngx_palloc(c->pool, sizeof(int) * ext_len);
-+    if (c->ssl->client_extensions == NULL) {
-+        OPENSSL_free(ext_out);
-+        return 1;
-+    }
-+
-+    c->ssl->client_extensions_size = ext_len;
-+    ngx_memcpy(c->ssl->client_extensions, ext_out, sizeof(int) * ext_len);
-+
-+    OPENSSL_free(ext_out);
 +
 +    return 1;
 +}
 +#endif
-+
-+
++/* ----- JA3 HACK END -------------------------------------------------------*/
+ 
  ngx_int_t
  ngx_ssl_handshake(ngx_connection_t *c)
- {
-@@ -1229,6 +1283,10 @@
+@@ -1229,6 +1330,10 @@ ngx_ssl_handshake(ngx_connection_t *c)
  
      ngx_ssl_clear_error(c->log);
  
@@ -73,18 +120,43 @@ diff -r 2e8de3d81783 src/event/ngx_event_openssl.c
      n = SSL_do_handshake(c->ssl->connection);
  
      ngx_log_debug1(NGX_LOG_DEBUG_EVENT, c->log, 0, "SSL_do_handshake: %d", n);
-diff -r 2e8de3d81783 src/event/ngx_event_openssl.h
---- a/src/event/ngx_event_openssl.h	Tue Aug 22 17:36:12 2017 +0300
-+++ b/src/event/ngx_event_openssl.h	Tue Aug 22 20:20:30 2017 +0000
-@@ -85,6 +85,11 @@
+@@ -1292,6 +1397,12 @@ ngx_ssl_handshake(ngx_connection_t *c)
+ 
+         c->ssl->handshaked = 1;
+ 
++/* ----- JA3 HACK START -----------------------------------------------------*/
++#if OPENSSL_VERSION_NUMBER >= 0x10101000L
++        ngx_SSL_client_features(c);
++#endif
++/* ----- JA3 HACK END -------------------------------------------------------*/
++
+         c->recv = ngx_ssl_recv;
+         c->send = ngx_ssl_write;
+         c->recv_chain = ngx_ssl_recv_chain;
+diff -Naurp nginx-1.14.0.orig/src/event/ngx_event_openssl.h nginx-1.14.0/src/event/ngx_event_openssl.h
+--- nginx-1.14.0.orig/src/event/ngx_event_openssl.h	2018-04-17 18:22:36.000000000 +0300
++++ nginx-1.14.0/src/event/ngx_event_openssl.h	2020-10-26 21:10:34.943067201 +0300
+@@ -86,6 +86,23 @@ struct ngx_ssl_connection_s {
      unsigned                    no_wait_shutdown:1;
      unsigned                    no_send_shutdown:1;
      unsigned                    handshake_buffer_set:1;
 +
++/* ----- JA3 HACK START -----------------------------------------------------*/
 +#if OPENSSL_VERSION_NUMBER >= 0x10101000L
-+    size_t                      client_extensions_size;
-+    int                        *client_extensions;
++
++    size_t                      ciphers_sz;
++    unsigned short             *ciphers;
++
++    size_t                      extensions_size;
++    int                        *extensions;
++
++    size_t                      curves_sz;
++    unsigned short             *curves;
++
++    size_t                      point_formats_sz;
++    unsigned char              *point_formats;
 +#endif
++/* ----- JA3 HACK END -------------------------------------------------------*/
  };
  
  

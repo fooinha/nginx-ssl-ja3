@@ -1,7 +1,7 @@
-diff -r -u openssl.orig/include/openssl/tls1.h openssl/include/openssl/tls1.h
---- openssl.orig/include/openssl/tls1.h	2019-02-12 23:44:30.004081000 +0000
-+++ openssl/include/openssl/tls1.h	2019-02-12 23:51:42.213326000 +0000
-@@ -133,6 +133,11 @@
+diff -upr openssl-1.1.1d_orig/include/openssl/tls1.h openssl-1.1.1d/include/openssl/tls1.h
+--- openssl-1.1.1d_orig/include/openssl/tls1.h  2019-09-10 16:13:07.000000000 +0300
++++ openssl-1.1.1d/include/openssl/tls1.h   2020-11-10 19:31:11.139757273 +0300
+@@ -131,6 +131,11 @@ extern "C" {
  /* ExtensionType value from RFC7627 */
  # define TLSEXT_TYPE_extended_master_secret      23
  
@@ -13,11 +13,10 @@ diff -r -u openssl.orig/include/openssl/tls1.h openssl/include/openssl/tls1.h
  /* ExtensionType value from RFC4507 */
  # define TLSEXT_TYPE_session_ticket              35
  
-Only in openssl/ssl/statem: .extensions.c.swp
-diff -r -u openssl.orig/ssl/statem/extensions.c openssl/ssl/statem/extensions.c
---- openssl.orig/ssl/statem/extensions.c	2019-02-12 23:48:29.687608000 +0000
-+++ openssl/ssl/statem/extensions.c	2019-02-12 23:45:46.161153000 +0000
-@@ -374,6 +374,22 @@
+diff -upr openssl-1.1.1d_orig/ssl/statem/extensions.c openssl-1.1.1d/ssl/statem/extensions.c
+--- openssl-1.1.1d_orig/ssl/statem/extensions.c 2019-09-10 16:13:07.000000000 +0300
++++ openssl-1.1.1d/ssl/statem/extensions.c  2020-11-10 19:31:11.139757273 +0300
+@@ -374,6 +374,22 @@ static const EXTENSION_DEFINITION ext_de
          tls_construct_certificate_authorities, NULL,
      },
      {
@@ -40,3 +39,15 @@ diff -r -u openssl.orig/ssl/statem/extensions.c openssl/ssl/statem/extensions.c
          /* Must be immediately before pre_shared_key */
          TLSEXT_TYPE_padding,
          SSL_EXT_CLIENT_HELLO,
+diff -upr openssl-1.1.1d_orig/ssl/ssl_locl.h openssl-1.1.1d/ssl/ssl_locl.h
+--- openssl-1.1.1d_orig/ssl/ssl_locl.h  2020-10-26 18:19:43.157168940 +0300
++++ openssl-1.1.1d/ssl/ssl_locl.h       2020-11-10 18:49:14.150574957 +0300
+@@ -715,6 +715,8 @@ typedef enum tlsext_index_en {
+     TLSEXT_IDX_cryptopro_bug,
+     TLSEXT_IDX_early_data,
+     TLSEXT_IDX_certificate_authorities,
++    TLSEXT_IDX_compress_certificate,
++    TLSEXT_IDX_record_size_limit,
+     TLSEXT_IDX_padding,
+     TLSEXT_IDX_psk,
+     /* Dummy index - must always be the last entry */

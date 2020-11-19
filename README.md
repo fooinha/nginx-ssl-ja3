@@ -86,7 +86,7 @@ the patch is already applied. Check the Dockerfile of the dev image.
 ### Patches
 
  - [nginx - save client hello extensions](patches/nginx.latest.patch)
- - [openssl - more tls extensions](patches/openssl.extensions.patch)
+ - openssl - more tls extensions: [for versions up to 1.1.1d](patches/openssl_1.1.1d.extensions.patch) and [for openssl versions from 1.1.1e](patches/openssl_1.1.1e.extensions.patch)
 
 
 ### Compilation and installation

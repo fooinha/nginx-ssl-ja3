@@ -1,0 +1,53 @@
+diff -upr openssl-1.1.1e_orig/include/openssl/tls1.h openssl-1.1.1e/include/openssl/tls1.h
+--- openssl-1.1.1e_orig/include/openssl/tls1.h  2019-09-10 16:13:07.000000000 +0300
++++ openssl-1.1.1e/include/openssl/tls1.h   2020-11-10 19:31:11.139757273 +0300
+@@ -131,6 +131,11 @@ extern "C" {
+ /* ExtensionType value from RFC7627 */
+ # define TLSEXT_TYPE_extended_master_secret      23
+ 
++/* [draft-ietf-tls-certificate-compression] */
++# define TLSEXT_TYPE_compress_certificate        27
++/* ExtensionType value from RFC8449 */
++# define TLSEXT_TYPE_record_size_limit           28
++
+ /* ExtensionType value from RFC4507 */
+ # define TLSEXT_TYPE_session_ticket              35
+ 
+diff -upr openssl-1.1.1e_orig/ssl/statem/extensions.c openssl-1.1.1e/ssl/statem/extensions.c
+--- openssl-1.1.1e_orig/ssl/statem/extensions.c 2019-09-10 16:13:07.000000000 +0300
++++ openssl-1.1.1e/ssl/statem/extensions.c  2020-11-10 19:31:11.139757273 +0300
+@@ -374,6 +374,22 @@ static const EXTENSION_DEFINITION ext_de
+         tls_construct_certificate_authorities, NULL,
+     },
+     {
++        TLSEXT_TYPE_compress_certificate,
++        SSL_EXT_CLIENT_HELLO,
++        NULL,
++        NULL, NULL,
++        NULL,
++        NULL, NULL,
++    },
++    {
++        TLSEXT_TYPE_record_size_limit,
++        SSL_EXT_CLIENT_HELLO,
++        NULL,
++        NULL, NULL,
++        NULL,
++        NULL, NULL,
++    },
++    {
+         /* Must be immediately before pre_shared_key */
+         TLSEXT_TYPE_padding,
+         SSL_EXT_CLIENT_HELLO,
+diff -upr openssl-1.1.1e_orig/ssl/ssl_local.h openssl-1.1.1e/ssl/ssl_local.h
+--- openssl-1.1.1e_orig/ssl/ssl_local.h  2020-10-26 18:19:43.157168940 +0300
++++ openssl-1.1.1e/ssl/ssl_local.h       2020-11-10 18:49:14.150574957 +0300
+@@ -715,6 +715,8 @@ typedef enum tlsext_index_en {
+     TLSEXT_IDX_cryptopro_bug,
+     TLSEXT_IDX_early_data,
+     TLSEXT_IDX_certificate_authorities,
++    TLSEXT_IDX_compress_certificate,
++    TLSEXT_IDX_record_size_limit,
+     TLSEXT_IDX_padding,
+     TLSEXT_IDX_psk,
+     /* Dummy index - must always be the last entry */

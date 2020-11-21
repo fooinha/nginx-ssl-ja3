@@ -66,8 +66,8 @@ RUN git clone https://github.com/openssl/openssl
 WORKDIR /build/openssl
 
 RUN git checkout OpenSSL_1_1_1 -b patched
-COPY patches/openssl.extensions.patch /build/openssl
-RUN patch -p1 < openssl.extensions.patch
+COPY patches/openssl_1.1.1d.extensions.patch /build/openssl
+RUN patch -p1 < openssl_1.1.1d.extensions.patch
 RUN ./config -d
 RUN make
 RUN make install

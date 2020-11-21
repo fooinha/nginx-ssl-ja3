@@ -97,10 +97,11 @@ Build as a common nginx module.
 
 # Hack/patch openssl - to include more common extensions
 
-$ patch  -p1 < /build/nginx-ssl-ja3/patches/openssl.extensions.patch
+$ patch  -p1 < /build/nginx-ssl-ja3/patches/openssl_1.1.1d.extensions.patch
 
 patching file include/openssl/tls1.h
 patching file ssl/statem/extensions.c
+patching file ssl/ssl_locl.h
 
 
 # Hack/patch nginx

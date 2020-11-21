@@ -33,7 +33,7 @@ install:
 script:
   - cd openssl
   - git checkout OpenSSL_1_1_1 -b patched
-  - patch -p1 < ../patches/openssl.extensions.patch
+  - patch -p1 < ../patches/openssl_1.1.1d.extensions.patch
   - ./config -d
   - make -j$JOBS 2>&1 > build.log || (cat build.log && exit 1)
   - sudo make install 2>&1 > build.log || (cat build.log && exit 1)

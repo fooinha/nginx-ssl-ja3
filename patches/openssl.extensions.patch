@@ -1,6 +1,21 @@
-diff -upr openssl-1.1.1d_orig/include/openssl/tls1.h openssl-1.1.1d/include/openssl/tls1.h
---- openssl-1.1.1d_orig/include/openssl/tls1.h  2019-09-10 16:13:07.000000000 +0300
-+++ openssl-1.1.1d/include/openssl/tls1.h   2020-11-10 19:31:11.139757273 +0300
+diff --git a/include/openssl/ssl.h b/include/openssl/ssl.h
+index 0a18a43544..9063565159 100644
+--- a/include/openssl/ssl.h
++++ b/include/openssl/ssl.h
+@@ -2342,6 +2342,9 @@ int OPENSSL_init_ssl(uint64_t opts, const OPENSSL_INIT_SETTINGS *settings);
+ __owur const struct openssl_ssl_test_functions *SSL_test_functions(void);
+ # endif
+ 
++__owur unsigned char * SSL_RECORD_LAYER_get_packet(SSL *ssl);
++__owur size_t SSL_RECORD_LAYER_get_packet_length(SSL *ssl);
++
+ __owur int SSL_free_buffers(SSL *ssl);
+ __owur int SSL_alloc_buffers(SSL *ssl);
+ 
+diff --git a/include/openssl/tls1.h b/include/openssl/tls1.h
+index 2e46cf80d3..b19719fc21 100644
+--- a/include/openssl/tls1.h
++++ b/include/openssl/tls1.h
 @@ -131,6 +131,11 @@ extern "C" {
  /* ExtensionType value from RFC7627 */
  # define TLSEXT_TYPE_extended_master_secret      23
@@ -13,13 +28,52 @@ diff -upr openssl-1.1.1d_orig/include/openssl/tls1.h openssl-1.1.1d/include/open
  /* ExtensionType value from RFC4507 */
  # define TLSEXT_TYPE_session_ticket              35
  
-diff -upr openssl-1.1.1d_orig/ssl/statem/extensions.c openssl-1.1.1d/ssl/statem/extensions.c
---- openssl-1.1.1d_orig/ssl/statem/extensions.c 2019-09-10 16:13:07.000000000 +0300
-+++ openssl-1.1.1d/ssl/statem/extensions.c  2020-11-10 19:31:11.139757273 +0300
-@@ -374,6 +374,22 @@ static const EXTENSION_DEFINITION ext_de
+diff --git a/ssl/ssl_lib.c b/ssl/ssl_lib.c
+index d75158e30c..56747533c8 100644
+--- a/ssl/ssl_lib.c
++++ b/ssl/ssl_lib.c
+@@ -5063,6 +5063,19 @@ int SSL_client_hello_get0_ext(SSL *s, unsigned int type, const unsigned char **o
+     return 0;
+ }
+ 
++unsigned char * SSL_RECORD_LAYER_get_packet(SSL *ssl)
++{
++    RECORD_LAYER *rl = &ssl->rlayer;
++    return RECORD_LAYER_get_packet(rl);
++}
++
++
++size_t SSL_RECORD_LAYER_get_packet_length(SSL *ssl)
++{
++    RECORD_LAYER *rl = &ssl->rlayer;
++    return RECORD_LAYER_get_packet_length(rl);
++}
++
+ int SSL_free_buffers(SSL *ssl)
+ {
+     RECORD_LAYER *rl = &ssl->rlayer;
+diff --git a/ssl/ssl_locl.h b/ssl/ssl_locl.h
+index e8819e7a28..40cc101afc 100644
+--- a/ssl/ssl_locl.h
++++ b/ssl/ssl_locl.h
+@@ -719,6 +719,8 @@ typedef enum tlsext_index_en {
+     TLSEXT_IDX_cryptopro_bug,
+     TLSEXT_IDX_early_data,
+     TLSEXT_IDX_certificate_authorities,
++    TLSEXT_IDX_compress_certificate,
++    TLSEXT_IDX_record_size_limit,
+     TLSEXT_IDX_padding,
+     TLSEXT_IDX_psk,
+     /* Dummy index - must always be the last entry */
+diff --git a/ssl/statem/extensions.c b/ssl/statem/extensions.c
+index 8422161dc1..2bb33205f1 100644
+--- a/ssl/statem/extensions.c
++++ b/ssl/statem/extensions.c
+@@ -371,6 +371,22 @@ static const EXTENSION_DEFINITION ext_defs[] = {
+         tls_construct_certificate_authorities,
          tls_construct_certificate_authorities, NULL,
      },
-     {
++    {
 +        TLSEXT_TYPE_compress_certificate,
 +        SSL_EXT_CLIENT_HELLO,
 +        NULL,
@@ -35,19 +89,16 @@ diff -upr openssl-1.1.1d_orig/ssl/statem/extensions.c openssl-1.1.1d/ssl/statem/
 +        NULL,
 +        NULL, NULL,
 +    },
-+    {
+     {
          /* Must be immediately before pre_shared_key */
          TLSEXT_TYPE_padding,
-         SSL_EXT_CLIENT_HELLO,
-diff -upr openssl-1.1.1d_orig/ssl/ssl_locl.h openssl-1.1.1d/ssl/ssl_locl.h
---- openssl-1.1.1d_orig/ssl/ssl_locl.h  2020-10-26 18:19:43.157168940 +0300
-+++ openssl-1.1.1d/ssl/ssl_locl.h       2020-11-10 18:49:14.150574957 +0300
-@@ -715,6 +715,8 @@ typedef enum tlsext_index_en {
-     TLSEXT_IDX_cryptopro_bug,
-     TLSEXT_IDX_early_data,
-     TLSEXT_IDX_certificate_authorities,
-+    TLSEXT_IDX_compress_certificate,
-+    TLSEXT_IDX_record_size_limit,
-     TLSEXT_IDX_padding,
-     TLSEXT_IDX_psk,
-     /* Dummy index - must always be the last entry */
+diff --git a/util/libssl.num b/util/libssl.num
+index ccf73411a9..1224c5ee71 100644
+--- a/util/libssl.num
++++ b/util/libssl.num
+@@ -497,3 +497,5 @@ SSL_get_recv_max_early_data             497	1_1_1	EXIST::FUNCTION:
+ SSL_CTX_get_recv_max_early_data         498	1_1_1	EXIST::FUNCTION:
+ SSL_CTX_set_recv_max_early_data         499	1_1_1	EXIST::FUNCTION:
+ SSL_CTX_set_post_handshake_auth         500	1_1_1	EXIST::FUNCTION:
++SSL_RECORD_LAYER_get_packet             501	1_1_1	EXIST::FUNCTION:
++SSL_RECORD_LAYER_get_packet_length      502	1_1_1	EXIST::FUNCTION:

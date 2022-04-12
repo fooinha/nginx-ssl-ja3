@@ -40,7 +40,7 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get install -y --fix-missing \
     mercurial \
     ngrep \
     procps \
-    python \
+    python3 \
     telnet \
     tcpflow \
     valgrind \

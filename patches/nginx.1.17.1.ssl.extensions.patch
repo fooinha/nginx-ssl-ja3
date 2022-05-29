@@ -1,7 +1,7 @@
 diff -r d964b0aee8e7 src/event/ngx_event_openssl.c
 --- a/src/event/ngx_event_openssl.c	Thu May 23 16:49:22 2019 +0300
 +++ b/src/event/ngx_event_openssl.c	Sat Jun 01 14:53:52 2019 +0000
-@@ -1588,6 +1588,107 @@
+@@ -1588,6 +1588,108 @@
      return NGX_OK;
  }
  
@@ -14,6 +14,7 @@ diff -r d964b0aee8e7 src/event/ngx_event_openssl.c
 +    unsigned short                *ciphers_out = NULL;
 +    int                           *curves_out = NULL;
 +    int                           *point_formats_out = NULL;
++    size_t                         i;
 +    size_t                         len = 0;
 +    SSL                           *s = NULL;
 +
@@ -42,7 +43,7 @@ diff -r d964b0aee8e7 src/event/ngx_event_openssl.c
 +            len = c->ssl->curves_sz * sizeof(unsigned short);
 +            c->ssl->curves = ngx_pnalloc(c->pool, len);
 +            if (c->ssl->curves != NULL) {
-+                for (size_t i = 0; i < c->ssl->curves_sz; i++) {
++                for (i = 0; i < c->ssl->curves_sz; i++) {
 +                     c->ssl->curves[i] = curves_out[i];
 +                }
 +            }

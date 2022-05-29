@@ -88,7 +88,8 @@ static const int nid_list[] = {
     NID_brainpoolP256r1,  /* brainpoolP256r1 (26) */
     NID_brainpoolP384r1,  /* brainpoolP384r1 (27) */
     NID_brainpoolP512r1,  /* brainpool512r1 (28) */
-    EVP_PKEY_X25519,      /* X25519 (29) */
+    NID_X25519,           /* X25519 (29) */
+    NID_X448,             /* X448 (30) */
 };
 
 

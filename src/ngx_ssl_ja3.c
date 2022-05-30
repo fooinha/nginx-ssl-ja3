@@ -106,6 +106,22 @@ ngx_ssl_ja3_nid_to_cid(int nid)
         }
     }
 
+    if (nid == NID_ffdhe2048) {
+        return 0x100;
+    }
+    if (nid == NID_ffdhe3072) {
+        return 0x101;
+    }
+    if (nid == NID_ffdhe4096) {
+        return 0x102;
+    }
+    if (nid == NID_ffdhe6144) {
+        return 0x103;
+    }
+    if (nid == NID_ffdhe8192) {
+        return 0x104;
+    }
+
     return nid;
 }
 

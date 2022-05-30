@@ -1,7 +1,8 @@
-diff -upr openssl-1.1.1d_orig/include/openssl/tls1.h openssl-1.1.1d/include/openssl/tls1.h
---- openssl-1.1.1d_orig/include/openssl/tls1.h  2019-09-10 16:13:07.000000000 +0300
-+++ openssl-1.1.1d/include/openssl/tls1.h   2020-11-10 19:31:11.139757273 +0300
-@@ -131,6 +131,11 @@ extern "C" {
+diff --git a/include/openssl/tls1.h b/include/openssl/tls1.h
+index 2e46cf80d3..cf43f544ad 100644
+--- a/include/openssl/tls1.h
++++ b/include/openssl/tls1.h
+@@ -131,6 +131,15 @@ extern "C" {
  /* ExtensionType value from RFC7627 */
  # define TLSEXT_TYPE_extended_master_secret      23
  
@@ -10,16 +11,44 @@ diff -upr openssl-1.1.1d_orig/include/openssl/tls1.h openssl-1.1.1d/include/open
 +/* ExtensionType value from RFC8449 */
 +# define TLSEXT_TYPE_record_size_limit           28
 +
++/* Extension Type application_settings 17513 */
++// https://www.ietf.org/archive/id/draft-vvv-tls-alps-00.html
++# define TLSEXT_TYPE_application_settings     17513
++
  /* ExtensionType value from RFC4507 */
  # define TLSEXT_TYPE_session_ticket              35
  
-diff -upr openssl-1.1.1d_orig/ssl/statem/extensions.c openssl-1.1.1d/ssl/statem/extensions.c
---- openssl-1.1.1d_orig/ssl/statem/extensions.c 2019-09-10 16:13:07.000000000 +0300
-+++ openssl-1.1.1d/ssl/statem/extensions.c  2020-11-10 19:31:11.139757273 +0300
-@@ -374,6 +374,22 @@ static const EXTENSION_DEFINITION ext_de
+@@ -145,6 +154,7 @@ extern "C" {
+ # define TLSEXT_TYPE_signature_algorithms_cert   50
+ # define TLSEXT_TYPE_key_share                   51
+
++
+ /* Temporary extension type */
+ # define TLSEXT_TYPE_renegotiate                 0xff01
+
+diff --git a/ssl/ssl_locl.h b/ssl/ssl_locl.h
+index e8819e7a28..3b49018cf4 100644
+--- a/ssl/ssl_locl.h
++++ b/ssl/ssl_locl.h
+@@ -719,6 +719,9 @@ typedef enum tlsext_index_en {
+     TLSEXT_IDX_cryptopro_bug,
+     TLSEXT_IDX_early_data,
+     TLSEXT_IDX_certificate_authorities,
++    TLSEXT_IDX_compress_certificate,
++    TLSEXT_IDX_record_size_limit,
++    TLSEXT_IDX_application_settings,
+     TLSEXT_IDX_padding,
+     TLSEXT_IDX_psk,
+     /* Dummy index - must always be the last entry */
+diff --git a/ssl/statem/extensions.c b/ssl/statem/extensions.c
+index 8422161dc1..4979b58467 100644
+--- a/ssl/statem/extensions.c
++++ b/ssl/statem/extensions.c
+@@ -371,6 +371,30 @@ static const EXTENSION_DEFINITION ext_defs[] = {
+         tls_construct_certificate_authorities,
          tls_construct_certificate_authorities, NULL,
      },
-     {
++    {
 +        TLSEXT_TYPE_compress_certificate,
 +        SSL_EXT_CLIENT_HELLO,
 +        NULL,
@@ -36,18 +65,13 @@ diff -upr openssl-1.1.1d_orig/ssl/statem/extensions.c openssl-1.1.1d/ssl/statem/
 +        NULL, NULL,
 +    },
 +    {
++        TLSEXT_TYPE_application_settings,
++        SSL_EXT_CLIENT_HELLO,
++        NULL,
++        NULL, NULL,
++        NULL,
++        NULL, NULL,
++    },
+     {
          /* Must be immediately before pre_shared_key */
          TLSEXT_TYPE_padding,
-         SSL_EXT_CLIENT_HELLO,
-diff -upr openssl-1.1.1d_orig/ssl/ssl_locl.h openssl-1.1.1d/ssl/ssl_locl.h
---- openssl-1.1.1d_orig/ssl/ssl_locl.h  2020-10-26 18:19:43.157168940 +0300
-+++ openssl-1.1.1d/ssl/ssl_locl.h       2020-11-10 18:49:14.150574957 +0300
-@@ -715,6 +715,8 @@ typedef enum tlsext_index_en {
-     TLSEXT_IDX_cryptopro_bug,
-     TLSEXT_IDX_early_data,
-     TLSEXT_IDX_certificate_authorities,
-+    TLSEXT_IDX_compress_certificate,
-+    TLSEXT_IDX_record_size_limit,
-     TLSEXT_IDX_padding,
-     TLSEXT_IDX_psk,
-     /* Dummy index - must always be the last entry */

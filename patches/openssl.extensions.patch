@@ -1,11 +1,21 @@
 diff --git a/include/openssl/tls1.h b/include/openssl/tls1.h
-index 2e46cf80d3..cf43f544ad 100644
+index 2e46cf80d3..c883d0f4fc 100644
 --- a/include/openssl/tls1.h
 +++ b/include/openssl/tls1.h
-@@ -131,6 +131,15 @@ extern "C" {
+@@ -113,6 +113,9 @@ extern "C" {
+ /* ExtensionType value from RFC7301 */
+ # define TLSEXT_TYPE_application_layer_protocol_negotiation 16
+
++/* ExtensionType value from RFC6961 */
++# define TLSEXT_TYPE_status_request_v2  17
++
+ /*
+  * Extension type for Certificate Transparency
+  * https://tools.ietf.org/html/rfc6962#section-3.3.1
+@@ -131,6 +134,15 @@ extern "C" {
  /* ExtensionType value from RFC7627 */
  # define TLSEXT_TYPE_extended_master_secret      23
- 
+
 +/* [draft-ietf-tls-certificate-compression] */
 +# define TLSEXT_TYPE_compress_certificate        27
 +/* ExtensionType value from RFC8449 */
@@ -17,8 +27,8 @@ index 2e46cf80d3..cf43f544ad 100644
 +
  /* ExtensionType value from RFC4507 */
  # define TLSEXT_TYPE_session_ticket              35
- 
-@@ -145,6 +154,7 @@ extern "C" {
+
+@@ -145,6 +157,7 @@ extern "C" {
  # define TLSEXT_TYPE_signature_algorithms_cert   50
  # define TLSEXT_TYPE_key_share                   51
 
@@ -27,24 +37,25 @@ index 2e46cf80d3..cf43f544ad 100644
  # define TLSEXT_TYPE_renegotiate                 0xff01
 
 diff --git a/ssl/ssl_locl.h b/ssl/ssl_locl.h
-index e8819e7a28..3b49018cf4 100644
+index e8819e7a28..b870ca3247 100644
 --- a/ssl/ssl_locl.h
 +++ b/ssl/ssl_locl.h
-@@ -719,6 +719,9 @@ typedef enum tlsext_index_en {
+@@ -719,6 +719,10 @@ typedef enum tlsext_index_en {
      TLSEXT_IDX_cryptopro_bug,
      TLSEXT_IDX_early_data,
      TLSEXT_IDX_certificate_authorities,
 +    TLSEXT_IDX_compress_certificate,
 +    TLSEXT_IDX_record_size_limit,
 +    TLSEXT_IDX_application_settings,
++    TLSEXT_IDX_status_request_v2,
      TLSEXT_IDX_padding,
      TLSEXT_IDX_psk,
      /* Dummy index - must always be the last entry */
 diff --git a/ssl/statem/extensions.c b/ssl/statem/extensions.c
-index 8422161dc1..4979b58467 100644
+index 8422161dc1..a7d9666c72 100644
 --- a/ssl/statem/extensions.c
 +++ b/ssl/statem/extensions.c
-@@ -371,6 +371,30 @@ static const EXTENSION_DEFINITION ext_defs[] = {
+@@ -371,6 +371,38 @@ static const EXTENSION_DEFINITION ext_defs[] = {
          tls_construct_certificate_authorities,
          tls_construct_certificate_authorities, NULL,
      },
@@ -66,6 +77,14 @@ index 8422161dc1..4979b58467 100644
 +    },
 +    {
 +        TLSEXT_TYPE_application_settings,
++        SSL_EXT_CLIENT_HELLO,
++        NULL,
++        NULL, NULL,
++        NULL,
++        NULL, NULL,
++    },
++    {
++        TLSEXT_TYPE_status_request_v2,
 +        SSL_EXT_CLIENT_HELLO,
 +        NULL,
 +        NULL, NULL,

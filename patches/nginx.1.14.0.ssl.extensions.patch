@@ -1,6 +1,6 @@
 diff -Naurp nginx-1.14.0.orig/src/event/ngx_event_openssl.c nginx-1.14.0/src/event/ngx_event_openssl.c
---- nginx-1.14.0.orig/src/event/ngx_event_openssl.c	2018-04-17 18:22:36.000000000 +0300
-+++ nginx-1.14.0/src/event/ngx_event_openssl.c	2020-10-26 21:08:09.110961786 +0300
+--- nginx-1.14.0.orig/src/event/ngx_event_openssl.c	2022-07-26 12:37:49.136566490 +0430
++++ nginx-1.14.0/src/event/ngx_event_openssl.c	2022-07-26 12:38:20.926566041 +0430
 @@ -1220,6 +1220,107 @@ ngx_ssl_set_session(ngx_connection_t *c,
      return NGX_OK;
  }
@@ -97,8 +97,8 @@ diff -Naurp nginx-1.14.0.orig/src/event/ngx_event_openssl.c nginx-1.14.0/src/eve
 +            if (c->ssl->extensions != NULL) {
 +                c->ssl->extensions_size = ext_len;
 +                ngx_memcpy(c->ssl->extensions, ext_out, sizeof(int) * ext_len);
-+                OPENSSL_free(ext_out);
 +            }
++            OPENSSL_free(ext_out);
 +        }
 +    }
 +
@@ -134,8 +134,8 @@ diff -Naurp nginx-1.14.0.orig/src/event/ngx_event_openssl.c nginx-1.14.0/src/eve
          c->send = ngx_ssl_write;
          c->recv_chain = ngx_ssl_recv_chain;
 diff -Naurp nginx-1.14.0.orig/src/event/ngx_event_openssl.h nginx-1.14.0/src/event/ngx_event_openssl.h
---- nginx-1.14.0.orig/src/event/ngx_event_openssl.h	2018-04-17 18:22:36.000000000 +0300
-+++ nginx-1.14.0/src/event/ngx_event_openssl.h	2020-10-26 21:10:34.943067201 +0300
+--- nginx-1.14.0.orig/src/event/ngx_event_openssl.h	2022-07-26 12:37:49.136566490 +0430
++++ nginx-1.14.0/src/event/ngx_event_openssl.h	2022-07-26 12:37:56.666566384 +0430
 @@ -86,6 +86,23 @@ struct ngx_ssl_connection_s {
      unsigned                    no_wait_shutdown:1;
      unsigned                    no_send_shutdown:1;

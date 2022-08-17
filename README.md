@@ -1,4 +1,4 @@
-# nginx-ssl-ja3  [![Build Status](https://travis-ci.org/fooinha/nginx-ssl-ja3.svg?branch=master)](https://travis-ci.org/fooinha/nginx-ssl-ja3)
+# nginx-ssl-ja3  [![Build Status](https://app.travis-ci.com/fooinha/nginx-ssl-ja3.svg?branch=master)](https://app.travis-ci.com/github/fooinha/nginx-ssl-ja3)
 
 nginx module for SSL/TLS ja3 fingerprint.
 

@@ -68,7 +68,7 @@ stream {
 
 ### Dependencies
 
-* [OpenSSL](https://github.com/openssl) - 1.1.1 (dev master version)
+* [OpenSSL](https://github.com/openssl) - 1.1.1 (branch OpenSSL_1_1_1-stable)
 
 The master version OpenSSL is required because this module fetches the
 extensions types declared at SSL/TLS Client Hello by using the new early

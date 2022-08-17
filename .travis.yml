@@ -28,11 +28,10 @@ install:
   - if [ ! -d /opt ]; then mkdir /opt; fi
   - git clone https://github.com/nginx/nginx-tests
   - hg clone http://hg.nginx.org/nginx
-  - git clone https://github.com/openssl/openssl
+  - git clone -v https://github.com/openssl/openssl  -b 'OpenSSL_1_1_1-stable'
 
 script:
   - cd openssl
-  - git checkout OpenSSL_1_1_1 -b patched
   - patch -p1 < ../patches/openssl.extensions.patch
   - ./config -d
   - make -j$JOBS 2>&1 > build.log || (cat build.log && exit 1)

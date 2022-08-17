@@ -36,10 +36,10 @@ index 2e46cf80d3..c883d0f4fc 100644
  /* Temporary extension type */
  # define TLSEXT_TYPE_renegotiate                 0xff01
 
-diff --git a/ssl/ssl_locl.h b/ssl/ssl_locl.h
+diff --git a/ssl/ssl_local.h b/ssl/ssl_local.h
 index e8819e7a28..b870ca3247 100644
---- a/ssl/ssl_locl.h
-+++ b/ssl/ssl_locl.h
+--- a/ssl/ssl_local.h
++++ b/ssl/ssl_local.h
 @@ -719,6 +719,10 @@ typedef enum tlsext_index_en {
      TLSEXT_IDX_cryptopro_bug,
      TLSEXT_IDX_early_data,

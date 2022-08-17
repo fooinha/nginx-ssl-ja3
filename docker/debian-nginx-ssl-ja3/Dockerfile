@@ -59,14 +59,12 @@ VOLUME ["/build/nginx-ssl-ja3"]
 # Get test framework
 RUN git clone https://github.com/nginx/nginx-tests
 
-# Get openssl master from git
-RUN git clone https://github.com/openssl/openssl
 
 # Build and install openssl
-WORKDIR /build/openssl
-
-RUN git checkout OpenSSL_1_1_1 -b patched
+RUN git clone -v https://github.com/openssl/openssl  -b 'OpenSSL_1_1_1-stable'
 COPY patches/openssl.extensions.patch /build/openssl
+
+WORKDIR /build/openssl
 RUN patch -p1 < openssl.extensions.patch
 RUN ./config -d
 RUN make

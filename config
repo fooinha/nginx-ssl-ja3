@@ -4,7 +4,7 @@ ngx_module_incs=$ngx_addon_dir/src
 NGINX_VERSION=`grep version src/core/nginx.h  | sed 's/#define nginx_version *//;'`
 
 
-if [ ! -z "${NGINX_VERSION}" ]
+if [ ! -z "${NGINX_VERSION}" ] && [ $STREAM != NO ]
 then
     if [ $NGINX_VERSION -gt 1011002 ]
     then

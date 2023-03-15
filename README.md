@@ -12,7 +12,8 @@ For details about the ja3 fingerprint algorithm, check initial [project](https:/
 
 ### Directives
 
-No directives yet.
+Revision 110 of chrome browser introduces TLS ClientHello extensions random permutation, which makes fingerprinting irrelevant with this browser (firefox is planning to do the same).
+Using JA3_SORT_EXT cc macro during nginx configure invocation (--with-cc-opt='-DJA3_SORT_EXT') configures the module to sort TLS extensions in the JA3 string. The resulting fincgerprint is not compliant anymore with the JA3 algorithm (at this time of writing), but allow to get back effectiveness of fingerprinting.
 
 ### Variables
 

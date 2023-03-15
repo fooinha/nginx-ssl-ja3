@@ -138,6 +138,22 @@ ngx_ssj_ja3_num_digits(int n)
     return c;
 }
 
+static void
+ngx_sort_ext(unsigned short *ext, int size)
+{
+    for (int i = 0; i < size - 1; i++)
+    {
+        for (int j = 0; j < size - i - 1; j++)
+        {
+            if (ext[j] > ext[j + 1])
+            {
+                int tmp = ext[j];
+                ext[j] = ext[j + 1];
+                ext[j + 1] = tmp;
+            }
+        }
+    }
+}
 
 #if (NGX_DEBUG)
 static void
@@ -370,6 +386,9 @@ ngx_ssl_ja3(ngx_connection_t *c, ngx_pool_t *pool, ngx_ssl_ja3_t *ja3) {
                 ja3->extensions[ja3->extensions_sz++] = c->ssl->extensions[i];
             }
         }
+#ifdef JA3_SORT_EXT
+        ngx_sort_ext(ja3->extensions, ja3->extensions_sz);
+#endif
     }
 
     /* Elliptic curve points */

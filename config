@@ -34,7 +34,7 @@ ngx_feature_name="NGX_HAVE_OPENSSL_SSL_CLIENT_HELLO_CB"
 ngx_feature_run=no
 ngx_feature_incs="#include <openssl/ssl.h>"
 ngx_feature_path=
-ngx_feature_libs="-lssl $NGX_LD_OPT"
+ngx_feature_libs="-lssl -lcrypto $NGX_LD_OPT"
 ngx_feature_test="SSL_CTX_set_client_hello_cb(0, 0, 0);"
 . auto/feature
 

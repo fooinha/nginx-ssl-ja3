@@ -61,7 +61,7 @@ RUN git clone https://github.com/nginx/nginx-tests
 
 
 # Build and install openssl
-RUN git clone -v https://github.com/openssl/openssl  -b 'OpenSSL_1_1_1-stable'
+RUN git clone -v https://github.com/openssl/openssl -b 'OpenSSL_1_1_1-stable' --depth=1
 COPY patches/openssl.extensions.patch /build/openssl
 
 WORKDIR /build/openssl

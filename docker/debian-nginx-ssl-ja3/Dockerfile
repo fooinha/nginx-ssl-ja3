@@ -61,11 +61,11 @@ RUN git clone https://github.com/nginx/nginx-tests
 
 
 # Build and install openssl
-RUN git clone -v https://github.com/openssl/openssl  -b 'OpenSSL_1_1_1-stable'
-COPY patches/openssl.extensions.patch /build/openssl
+RUN git clone -v https://github.com/openssl/openssl  -b 'openssl-3.3.2'
+COPY patches/openssl-3.extensions.patch /build/openssl
 
 WORKDIR /build/openssl
-RUN patch -p1 < openssl.extensions.patch
+RUN patch -p1 < openssl-3.extensions.patch
 RUN ./config -d
 RUN make
 RUN make install

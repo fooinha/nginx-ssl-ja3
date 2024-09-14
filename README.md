@@ -1,4 +1,4 @@
-# nginx-ssl-ja3  [![Build Status](https://app.travis-ci.com/fooinha/nginx-ssl-ja3.svg?branch=master)](https://app.travis-ci.com/github/fooinha/nginx-ssl-ja3)
+# nginx-ssl-ja3
 
 nginx module for SSL/TLS ja3 fingerprint.
 
@@ -69,7 +69,7 @@ stream {
 
 ### Dependencies
 
-* [OpenSSL](https://github.com/openssl) - 1.1.1 (branch OpenSSL_1_1_1-stable)
+* [OpenSSL](https://github.com/openssl) - 3.3.2 (branch openssl-3.3.2)
 
 The master version OpenSSL is required because this module fetches the
 extensions types declared at SSL/TLS Client Hello by using the new early
@@ -87,7 +87,7 @@ the patch is already applied. Check the Dockerfile of the dev image.
 ### Patches
 
  - [nginx - save client hello extensions](patches/nginx.latest.patch)
- - [openssl - more tls extensions](patches/openssl.extensions.patch)
+ - [openssl - more tls extensions](patches/openssl-3.extensions.patch)
 
 
 ### Compilation and installation
@@ -98,10 +98,12 @@ Build as a common nginx module.
 
 # Hack/patch openssl - to include more common extensions
 
-$ patch  -p1 < /build/nginx-ssl-ja3/patches/openssl.extensions.patch
+$ patch  -p1 < /build/nginx-ssl-ja3/patches/openssl-3.extensions.patch
 
 patching file include/openssl/tls1.h
+...
 patching file ssl/statem/extensions.c
+...
 
 
 # Hack/patch nginx
@@ -109,10 +111,9 @@ patching file ssl/statem/extensions.c
 $ patch -p1 < /build/ngx_ssl_ja3/patches/nginx.latest.patch
 
 patching file src/event/ngx_event_openssl.c
-Hunk #1 succeeded at 1358 (offset 137 lines).
-Hunk #2 succeeded at 1426 (offset 143 lines).
+...
 patching file src/event/ngx_event_openssl.h
-Hunk #1 succeeded at 99 (offset 1 line).
+...
 
 # Configure
 
@@ -148,10 +149,6 @@ Creating nginx-ssl-ja3
 ## Contributors
 
 @**fooinha**  - author
-
-@**Sessa93**
-
-@**bartebor**
 
 ## Fair Warning
 

@@ -138,6 +138,7 @@ ngx_ssj_ja3_num_digits(int n)
     return c;
 }
 
+#ifdef JA3_SORT_EXT
 static void
 ngx_sort_ext(unsigned short *ext, int size)
 {
@@ -154,6 +155,7 @@ ngx_sort_ext(unsigned short *ext, int size)
         }
     }
 }
+#endif
 
 #if (NGX_DEBUG)
 static void

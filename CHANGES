@@ -1,3 +1,7 @@
+Changes nginx-ssl-ja3 v0.0.3                                        14 Set  2024
+
+ - Support for OpenSSL 3
+
 Changes nginx-ssl-ja3 v0.0.2                                        3 Jun  2019
 
  nginx-ssl-ja3: nginx variables for ja3 fingerprint

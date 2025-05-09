@@ -1,7 +1,7 @@
-diff -r 2e63d59c342d src/event/ngx_event_openssl.c
---- a/src/event/ngx_event_openssl.c	Tue Sep 10 16:48:11 2024 +0400
-+++ b/src/event/ngx_event_openssl.c	Sat Sep 14 18:00:11 2024 +0000
-@@ -1742,6 +1742,7 @@
+diff -u src/event/ngx_event_openssl.c src/event/ngx_event_openssl.c
+--- a/src/event/ngx_event_openssl.c	2025-05-09 09:22:41.641816383 +0000
++++ b/src/event/ngx_event_openssl.c	2025-05-09 09:50:23.401472760 +0000
+@@ -1624,6 +1624,7 @@
  #ifdef SSL_OP_NO_RENEGOTIATION
          SSL_set_options(sc->connection, SSL_OP_NO_RENEGOTIATION);
  #endif
@@ -9,7 +9,7 @@ diff -r 2e63d59c342d src/event/ngx_event_openssl.c
      }
  
      if (SSL_set_ex_data(sc->connection, ngx_ssl_connection_index, c) == 0) {
-@@ -1793,6 +1794,116 @@
+@@ -1675,6 +1676,119 @@
      return NGX_OK;
  }
  
@@ -18,28 +18,16 @@ diff -r 2e63d59c342d src/event/ngx_event_openssl.c
 +void
 +ngx_SSL_client_features(ngx_connection_t *c) {
 +
-+    unsigned short                *ciphers_out = NULL;
 +    int                           *curves_out = NULL;
 +    int                           *point_formats_out = NULL;
-+    size_t                         i = 0;
 +    size_t                         len = 0;
++    size_t                         i = 0;
 +    SSL                           *s = NULL;
 +
 +    if (c == NULL) {
 +        return;
 +    }
 +    s = c->ssl->connection;
-+
-+    /* Cipher suites */
-+    c->ssl->ciphers = NULL;
-+    c->ssl->ciphers_sz = SSL_get0_raw_cipherlist(s, &ciphers_out);
-+    c->ssl->ciphers_sz /= 2;
-+
-+    if (c->ssl->ciphers_sz && ciphers_out) {
-+        len = c->ssl->ciphers_sz * sizeof(unsigned short);
-+        c->ssl->ciphers = ngx_pnalloc(c->pool, len);
-+        ngx_memcpy(c->ssl->ciphers, ciphers_out, len);
-+    }
 +
 +    /* Elliptic curve points */
 +
@@ -81,9 +69,11 @@ diff -r 2e63d59c342d src/event/ngx_event_openssl.c
 +int
 +ngx_SSL_early_cb_fn(SSL *s, int *al, void *arg) {
 +
++    const unsigned char           *ciphers_out = NULL;
 +    int                            got_extensions;
 +    int                           *ext_out;
 +    size_t                         ext_len;
++    size_t                         len = 0;
 +    ngx_connection_t              *c;
 +
 +    c = arg;
@@ -120,13 +110,26 @@ diff -r 2e63d59c342d src/event/ngx_event_openssl.c
 +
 +    OPENSSL_free(ext_out);
 +
++
++    /* Cipher suites */
++    c->ssl->ciphers = NULL;
++    c->ssl->ciphers_sz = SSL_client_hello_get0_ciphers(s, &ciphers_out);
++    c->ssl->ciphers_sz /= 2;
++
++    if (c->ssl->ciphers_sz && ciphers_out) {
++        len = c->ssl->ciphers_sz * sizeof(unsigned short);
++        c->ssl->ciphers = ngx_pnalloc(c->pool, len);
++        ngx_memcpy(c->ssl->ciphers, ciphers_out, len);
++    }
++
++
 +    return 1;
 +}
 +/* ----- JA3 HACK END -------------------------------------------------------*/
  
  ngx_int_t
  ngx_ssl_handshake(ngx_connection_t *c)
-@@ -1813,6 +1924,10 @@
+@@ -1695,6 +1809,10 @@
  
      ngx_ssl_clear_error(c->log);
  
@@ -137,7 +140,7 @@ diff -r 2e63d59c342d src/event/ngx_event_openssl.c
      n = SSL_do_handshake(c->ssl->connection);
  
      ngx_log_debug1(NGX_LOG_DEBUG_EVENT, c->log, 0, "SSL_do_handshake: %d", n);
-@@ -1831,6 +1946,10 @@
+@@ -1713,6 +1831,10 @@
          ngx_ssl_handshake_log(c);
  #endif
  

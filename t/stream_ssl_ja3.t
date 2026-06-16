@@ -49,7 +49,7 @@ events {
 
 stream {
     server {
-        listen      127.0.0.1:12345 ssl;
+        listen      127.0.0.1:%%PORT_12345%% ssl;
 
         ssl_certificate_key localhost.key;
         ssl_certificate     localhost.crt;

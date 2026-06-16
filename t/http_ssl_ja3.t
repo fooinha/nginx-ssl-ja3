@@ -33,7 +33,7 @@ plan(skip_all => 'IO::Socket::SSL not installed') if $@;
 eval { IO::Socket::SSL::SSL_VERIFY_NONE(); };
 plan(skip_all => 'IO::Socket::SSL too old') if $@;
 
-my $t = Test::Nginx->new()->has_daemon('openssl')->plan(14);
+my $t = Test::Nginx->new()->has_daemon('openssl')->plan(11);
 
 $t->write_file_expand('nginx.conf', <<'EOF');
 

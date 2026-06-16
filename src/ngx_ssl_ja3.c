@@ -126,13 +126,10 @@ ngx_ssl_ja3_nid_to_cid(int nid)
 }
 
 static size_t
-ngx_ssj_ja3_num_digits(int n)
+ngx_ssj_ja3_num_digits(unsigned int n)
 {
-    int c = 0;
-    if (n < 9) {
-        return 1;
-    }
-    for (; n; n /= 10) {
+    size_t c = 1;
+    for (; n >= 10; n /= 10) {
         ++c;
     }
     return c;
@@ -264,6 +261,10 @@ ngx_ssl_ja3_fp(ngx_pool_t *pool, ngx_ssl_ja3_t *ja3, ngx_str_t *out)
     }
 
     out->data = ngx_pnalloc(pool, len);
+    if (out->data == NULL) {
+        out->len = 0;
+        return;
+    }
     out->len = len;
 
     len = ngx_ssj_ja3_num_digits(ja3->version) + 1;

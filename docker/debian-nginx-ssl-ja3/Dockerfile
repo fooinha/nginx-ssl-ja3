@@ -35,7 +35,6 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get install -y --fix-missing \
     libtool \
     lsof \
     make \
-    mercurial \
     ngrep \
     procps \
     python3 \
@@ -68,9 +67,9 @@ RUN ./config -d
 RUN make
 RUN make install
 
-# Clone from nginx
+# Clone nginx (hg.nginx.org is decommissioned; use GitHub mirror)
 WORKDIR /build
-RUN hg clone http://hg.nginx.org/nginx
+RUN git clone --depth 1 --branch release-1.27.2 https://github.com/nginx/nginx.git nginx
 
 # Patch nginx for fetching ssl client extensions
 WORKDIR /build/nginx
@@ -93,6 +92,9 @@ RUN echo '' | tee -a /root/.bashrc
 RUN echo 'export ASAN_OPTIONS=symbolize=1' | tee -a /root/.bashrc
 RUN echo 'export export ASAN_SYMBOLIZER_PATH=/usr/bin/llvm-symbolizer' | tee -a /root/.bashrc
 RUN echo '' | tee -a /root/.bashrc
+
+# Install Perl test dependencies
+RUN cpanm --notest Test::Nginx IO::Socket::SSL Digest::MD5
 
 WORKDIR /build
 COPY docker/debian-nginx-ssl-ja3/compile.sh /build/compile.sh

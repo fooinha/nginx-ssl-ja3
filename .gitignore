@@ -2,3 +2,10 @@ lib
 nginx
 openssl
 t/lib
+t/unit/test_ngx_ssl_ja3_fp
+t/unit/coverage.info
+t/unit/*.gcno
+t/unit/*.gcda
+t/unit/*.gcov
+docker/cert.pem
+docker/rsa.key

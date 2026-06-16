@@ -94,6 +94,9 @@ RUN echo 'export ASAN_OPTIONS=symbolize=1' | tee -a /root/.bashrc
 RUN echo 'export export ASAN_SYMBOLIZER_PATH=/usr/bin/llvm-symbolizer' | tee -a /root/.bashrc
 RUN echo '' | tee -a /root/.bashrc
 
+# Install Perl test dependencies
+RUN cpanm --notest Test::Nginx IO::Socket::SSL Digest::MD5
+
 WORKDIR /build
 COPY docker/debian-nginx-ssl-ja3/compile.sh /build/compile.sh
 RUN echo 'TO COMPILE RUN:\n    cd nginx\n    ASAN_OPTIONS=symbolize=1 ./auto/configure --add-module=/build/nginx-ssl-ja3 --with-http_ssl_module --with-stream_ssl_module --with-debug --with-stream --with-cc-opt="-fsanitize=address -O -fno-omit-frame-pointer" --with-ld-opt="-L/usr/local/lib -Wl,-E -lasan"\n    make install' | tee -a /build/COMPILE.ASAN.README

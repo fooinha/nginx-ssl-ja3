@@ -18,3 +18,15 @@ services:
         cap_add:
           - ALL
 
+    # Run all tests (C unit tests + Perl integration tests via Test::Nginx).
+    # Usage: docker compose -f docker/docker-compose.yml run --rm nginx-test
+    nginx-test:
+        build:
+            context: ../
+            dockerfile: docker/debian-nginx-ssl-ja3/Dockerfile
+        hostname: nginx-test
+        volumes:
+            - ../:/build/nginx-ssl-ja3
+        network_mode: bridge
+        command: bash /build/nginx-ssl-ja3/run_tests.sh
+

@@ -70,7 +70,7 @@ RUN make install
 
 # Clone from nginx
 WORKDIR /build
-RUN hg clone http://hg.nginx.org/nginx
+RUN hg clone https://hg.nginx.org/nginx
 
 # Patch nginx for fetching ssl client extensions
 WORKDIR /build/nginx

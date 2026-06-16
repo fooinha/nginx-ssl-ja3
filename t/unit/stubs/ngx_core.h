@@ -66,10 +66,20 @@ struct ngx_connection_s {
 #define ngx_log_debug1(level, log, err, fmt, a1)
 #define ngx_log_debug2(level, log, err, fmt, a1, a2)
 
+/*
+ * Set to 1 before a call to make the next ngx_pnalloc return NULL (OOM sim).
+ * Resets to 0 automatically after triggering.
+ */
+static int ngx_pnalloc_fail_next = 0;
+
 static inline void *
 ngx_pnalloc(ngx_pool_t *pool, size_t size)
 {
     (void)pool;
+    if (ngx_pnalloc_fail_next) {
+        ngx_pnalloc_fail_next = 0;
+        return NULL;
+    }
     return malloc(size);
 }
 

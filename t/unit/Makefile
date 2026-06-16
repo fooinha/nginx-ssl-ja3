@@ -11,7 +11,7 @@ CFLAGS  = -std=c99 -Wall -Wextra -Wpedantic \
           -I$(SRC_DIR) \
           $(OPENSSL_CFLAGS)
 
-SRCS    = test_ngx_ssl_ja3_fp.c $(SRC_DIR)/ngx_ssl_ja3.c
+SRCS    = test_ngx_ssl_ja3_fp.c
 TARGET  = test_ngx_ssl_ja3_fp
 
 .PHONY: all clean coverage

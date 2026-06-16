@@ -1,158 +1,175 @@
 # nginx-ssl-ja3
 
-nginx module for SSL/TLS ja3 fingerprint.
+nginx module for SSL/TLS JA3 fingerprinting.
 
 ## Description
 
-This module adds to nginx the ability of new nginx variables for the TLS/SSL ja3 fingerprint.
+This module adds nginx variables that expose the [JA3](https://github.com/salesforce/ja3)
+TLS client fingerprint and its MD5 hash. JA3 fingerprints the TLS ClientHello by combining
+the TLS version, cipher suites, extensions, elliptic curves, and elliptic curve point formats
+into a string that is then MD5-hashed.
 
-For details about the ja3 fingerprint algorithm, check initial [project](https://github.com/salesforce/ja3).
+> **Note:** Chrome 110+ and recent Firefox builds randomise the order of TLS ClientHello
+> extensions, which makes standard JA3 unstable across requests from the same browser.
+> Compile with `--with-cc-opt='-DJA3_SORT_EXT'` to sort extensions before fingerprinting
+> (produces a non-standard but stable fingerprint).
 
-## Configuration
+---
 
-### Directives
+## Variables
 
-Revision 110 of chrome browser introduces TLS ClientHello extensions random permutation, which makes fingerprinting irrelevant with this browser (firefox is planning to do the same).
-Using JA3_SORT_EXT cc macro during nginx configure invocation (--with-cc-opt='-DJA3_SORT_EXT') configures the module to sort TLS extensions in the JA3 string. The resulting fincgerprint is not compliant anymore with the JA3 algorithm (at this time of writing), but allow to get back effectiveness of fingerprinting.
+### HTTP
 
-### Variables
+| Variable | Description |
+|---|---|
+| `$http_ssl_ja3` | JA3 fingerprint string for an HTTP/HTTPS connection |
+| `$http_ssl_ja3_hash` | MD5 hash of `$http_ssl_ja3` |
 
-#### $http_ssl_ja3
+```nginx
+http {
+    server {
+        listen              127.0.0.1:443 ssl;
+        ssl_certificate     cert.pem;
+        ssl_certificate_key rsa.key;
+        return 200          "$http_ssl_ja3\n$http_ssl_ja3_hash\n";
+    }
+}
+```
 
-The ja3 fingerprint string for a SSL connection for a HTTP server.
-
+Example fingerprint string:
 ```
 771,4865-4866-4867-49195-49199-49196-49200-52393-52392-49171-49172-156-157-47-53-10,0-23-65281-10-11-35-16-5-13-18-51-45-43-21,0-29-23-24,0
 ```
 
-#### $http_ssl_ja3_hash
+### Stream
 
-The ja3 fingerprint MD5 hash for a SSL connection for a HTTP server.
+| Variable | Description |
+|---|---|
+| `$stream_ssl_ja3` | JA3 fingerprint string for a TCP stream SSL connection |
+| `$stream_ssl_ja3_hash` | MD5 hash of `$stream_ssl_ja3` |
 
-Example:
-
-```
-http {
-    server {
-        listen                 127.0.0.1:443 ssl;
-        ssl_certificate        cert.pem;
-        ssl_certificate_key    rsa.key;
-        error_log              /dev/stderr debug;
-        return                 200 "$time_iso8601\n\n$http_user_agent\n\n$http_ssl_ja3\n\n$http_ssl_ja3_hash\n";
-    }
-}
-```
-
-#### $stream_ssl_ja3
-
-The ja3 fingerprint string for a SSL connection for a stream server.
-
-#### $stream_ssl_ja3_hash
-
-The ja3 fingerprint MD5 hash for a SSL connection for a stream server.
-
-Example:
-
-```
+```nginx
 stream {
     server {
-        listen                 127.0.0.1:12345 ssl;
-        ssl_certificate        cert.pem;
-        ssl_certificate_key    rsa.key;
-        error_log              /dev/stderr debug;
-        return                 "$time_iso8601\n\n$stream_ssl_ja3\n\n$stream_ssl_ja3_hash\n";
+        listen              127.0.0.1:12345 ssl;
+        ssl_certificate     cert.pem;
+        ssl_certificate_key rsa.key;
+        return              "$stream_ssl_ja3\n$stream_ssl_ja3_hash\n";
     }
 }
 ```
+
+---
 
 ## Build
 
-### Dependencies
+### Requirements
 
-* [OpenSSL](https://github.com/openssl) - 3.3.2 (branch openssl-3.3.2)
+- **nginx** ≥ 1.11.2 (stream support) with `--with-http_ssl_module --with-stream_ssl_module`
+- **OpenSSL** ≥ 1.1.1 (for `SSL_CTX_set_client_hello_cb`) — OpenSSL 3.x recommended
 
-The master version OpenSSL is required because this module fetches the
-extensions types declared at SSL/TLS Client Hello by using the new early
-callback [SSL_CTX_set_client_hello_cb](https://www.openssl.org/docs/manmaster/man3/SSL_CTX_set_client_hello_cb.html).
+The module uses the nginx ClientHello early callback to capture cipher suites and extensions
+before the handshake completes, which requires a small patch to nginx source.
+No patch to OpenSSL itself is needed when using a system OpenSSL ≥ 1.1.1.
 
-I was unable to find a way to get these values with the current versions of
-nginx and OpenSSL.
+### Nginx patches
 
-So, in order to, have the client extensions available for the fingerprint,
-we also need to apply a patch to the nginx code.
+| Patch file | nginx version |
+|---|---|
+| [`patches/nginx.1.27.2.ssl.extensions.patch`](patches/nginx.1.27.2.ssl.extensions.patch) | nginx 1.27.2 |
+| [`patches/nginx.1.29.8.ssl.extensions.patch`](patches/nginx.1.29.8.ssl.extensions.patch) | nginx 1.29.x / 1.30.x / 1.31.x |
+| [`patches/nginx.1.23.1.ssl.extensions.patch`](patches/nginx.1.23.1.ssl.extensions.patch) | nginx 1.23.1 |
 
-If you use, for development, the [docker](#docker) supplied in this repo,
-the patch is already applied. Check the Dockerfile of the dev image.
-
-### Patches
-
- - [nginx - save client hello extensions](patches/nginx.latest.patch)
- - [openssl - more tls extensions](patches/openssl-3.extensions.patch)
-
-
-### Compilation and installation
-
-Build as a common nginx module.
+### Build steps
 
 ```bash
+# Clone nginx (pinned to the version matching your patch)
+git clone --depth 1 --branch release-1.27.2 https://github.com/nginx/nginx.git
+cd nginx
 
-# Hack/patch openssl - to include more common extensions
+# Apply the nginx patch
+patch -p1 < /path/to/nginx-ssl-ja3/patches/nginx.1.27.2.ssl.extensions.patch
 
-$ patch  -p1 < /build/nginx-ssl-ja3/patches/openssl-3.extensions.patch
+# Configure with the module
+./configure \
+    --add-module=/path/to/nginx-ssl-ja3 \
+    --with-http_ssl_module \
+    --with-stream_ssl_module \
+    --with-stream \
+    --with-debug
 
-patching file include/openssl/tls1.h
-...
-patching file ssl/statem/extensions.c
-...
-
-
-# Hack/patch nginx
-
-$ patch -p1 < /build/ngx_ssl_ja3/patches/nginx.latest.patch
-
-patching file src/event/ngx_event_openssl.c
-...
-patching file src/event/ngx_event_openssl.h
-...
-
-# Configure
-
-$ ./configure --add-module=/build/ngx_ssl_ja3 --with-http_ssl_module --with-stream_ssl_module --with-debug --with-stream
-
-# Install
-
-$ make && make install
-
+# Build and install
+make && make install
 ```
+
+> When using a custom OpenSSL build via `--with-openssl=/path`, nginx compiles OpenSSL
+> as part of its own build. The module's compile-time feature detection skips the
+> link test automatically in that case.
+
+---
+
 ## Tests
 
-Make sure that the lib directory for nginx-tests is available in the 't' directory.
+### Docker (recommended — runs everything)
 
+```bash
+docker compose -f docker/docker-compose.yml run --rm nginx-test
+```
 
+This builds a lean Debian bookworm image with system OpenSSL 3, patches and builds
+nginx 1.27.2, runs 71 C unit tests with lcov coverage, and runs 25 Perl integration
+tests (HTTP + stream).
+
+### C unit tests only
+
+```bash
+make -C t/unit all       # build and run
+make -C t/unit coverage  # run + print lcov coverage table
 ```
-$ TEST_NGINX_BINARY=/usr/local/nginx/sbin/nginx prove -v
+
+### Perl integration tests
+
+```bash
+# nginx must already be installed and TEST_NGINX_BINARY set
+export TEST_NGINX_BINARY=/usr/local/nginx/sbin/nginx
+prove -v t/http_ssl_ja3.t t/stream_ssl_ja3.t
 ```
+
+---
 
 ## Docker
 
-Docker images and a docker compose file is available at the ./docker directory.
+A dev image (with a from-source OpenSSL build) and a lean test image are available:
 
+```bash
+# Full dev environment
+docker compose -f docker/docker-compose.yml up --build nginx-dev
+
+# Lean test runner (CI-style)
+docker compose -f docker/docker-compose.yml run --rm nginx-test
 ```
-$ docker-compose up --build -d
 
-Creating nginx-ssl-ja3
-
-```
-
-
+---
 
 ## Contributors
 
-@**fooinha**  - author
+- [@fooinha](https://github.com/fooinha) — author and maintainer
+- [@Sessa93](https://github.com/Sessa93) — OpenSSL 1.1.1-pre9 support
+- [@bartebor](https://github.com/bartebor) — fix SSL session leak
+- [@catap](https://github.com/catap) — C99 mode fix; skip OpenSSL feature test for custom builds
+- [@tiandrey](https://github.com/tiandrey) — nginx 1.14.0 and OpenSSL patch updates
+- [@k1k](https://github.com/k1k) — allow building without stream module
+- [@gbilic](https://github.com/gbilic) — JA3_SORT_EXT extension sorting feature
+- [@oowl](https://github.com/oowl) — static-link build fix (`NGX_LIBDL`/`NGX_LIBPTHREAD`)
+- [@kamyabzad](https://github.com/kamyabzad) — fix segfault in ClientHello callback
+- [@climagabriel](https://github.com/climagabriel) — replace deprecated `SSL_get0_raw_cipherlist` with `SSL_client_hello_get0_ciphers`
+- [@vobloeb](https://github.com/vobloeb) — nginx 1.29.x / 1.30.x / 1.31.x patch
+- [@rc5hack](https://github.com/rc5hack) — compiler flag and git clone improvements
+
+---
 
 ## Fair Warning
 
-**THIS IS NOT PRODUCTION** ready.
+**THIS IS NOT PRODUCTION READY.**
 
-So there's no guarantee of success. It most probably blow up when running in real life scenarios.
-
+No guarantee of stability. It will most probably blow up in real-life scenarios.

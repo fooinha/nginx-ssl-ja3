@@ -35,7 +35,6 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get install -y --fix-missing \
     libtool \
     lsof \
     make \
-    mercurial \
     ngrep \
     procps \
     python3 \
@@ -68,9 +67,9 @@ RUN ./config -d
 RUN make
 RUN make install
 
-# Clone from nginx
+# Clone nginx (hg.nginx.org is decommissioned; use GitHub mirror)
 WORKDIR /build
-RUN hg clone https://hg.nginx.org/nginx
+RUN git clone --depth 1 --branch release-1.27.2 https://github.com/nginx/nginx.git nginx
 
 # Patch nginx for fetching ssl client extensions
 WORKDIR /build/nginx

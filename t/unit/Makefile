@@ -14,7 +14,7 @@ CFLAGS  = -std=c99 -Wall -Wextra -Wpedantic \
 SRCS    = test_ngx_ssl_ja3_fp.c $(SRC_DIR)/ngx_ssl_ja3.c
 TARGET  = test_ngx_ssl_ja3_fp
 
-.PHONY: all clean
+.PHONY: all clean coverage
 
 all: $(TARGET)
 	./$(TARGET)
@@ -22,5 +22,15 @@ all: $(TARGET)
 $(TARGET): $(SRCS)
 	$(CC) $(CFLAGS) -o $@ $^ $(OPENSSL_LIBS)
 
+coverage: clean
+	$(CC) $(CFLAGS) --coverage -O0 -fprofile-abs-path \
+	    -o $(TARGET) $(SRCS) $(OPENSSL_LIBS)
+	./$(TARGET)
+	lcov --capture --directory . \
+	     --output-file coverage.info --quiet 2>/dev/null
+	lcov --extract coverage.info '*/ngx_ssl_ja3.c' \
+	     --output-file coverage.info --quiet 2>/dev/null
+	lcov --list coverage.info
+
 clean:
-	rm -f $(TARGET)
+	rm -f $(TARGET) *.gcno *.gcda *.gcov coverage.info

@@ -9,11 +9,16 @@ diff -r 2e63d59c342d src/event/ngx_event_openssl.c
      }
  
      if (SSL_set_ex_data(sc->connection, ngx_ssl_connection_index, c) == 0) {
-@@ -1793,6 +1794,119 @@
+@@ -1793,6 +1794,355 @@
      return NGX_OK;
  }
  
-+/* ----- JA3 HACK START -----------------------------------------------------*/
++/* ----- JA3/JA4 HACK START -------------------------------------------------*/
++
++#ifndef NGX_SSL_IS_GREASE
++#define NGX_SSL_IS_GREASE(v) \
++    (((v) & 0x0f0f) == 0x0a0a && ((v) & 0xff) == (((v) >> 8) & 0xff))
++#endif
 +
 +void
 +ngx_SSL_client_features(ngx_connection_t *c) {
@@ -56,6 +61,161 @@ diff -r 2e63d59c342d src/event/ngx_event_openssl.c
 +        c->ssl->point_formats = ngx_pnalloc(c->pool, len);
 +        if (c->ssl->point_formats != NULL) {
 +            ngx_memcpy(c->ssl->point_formats, point_formats_out, len);
++        }
++    }
++}
++
++/* Parse a TLS extension list from a ServerHello or EncryptedExtensions body.
++ * Accumulates non-GREASE extension type codes (wire order) into ja4s_extensions.
++ * Also extracts ALPN and supported_versions for JA4S fields.
++ */
++static void
++ngx_ssl_ja4s_parse_exts(ngx_connection_t *c, const unsigned char *p, size_t len)
++{
++    const unsigned char    *end = p + len;
++    const unsigned char    *cur;
++    size_t                  count;
++    size_t                  i;
++    unsigned short          type;
++    uint16_t                ext_data_len;
++    uint16_t                v;
++    unsigned char           proto_len;
++    unsigned short         *new_exts;
++
++    /* first pass: count non-GREASE extensions; capture ALPN + supported_versions */
++    count = 0;
++    for (cur = p; cur + 4 <= end; ) {
++        type         = ((unsigned short) cur[0] << 8) | cur[1];
++        ext_data_len = ((uint16_t) cur[2] << 8) | cur[3];
++        cur += 4;
++
++        if (cur + ext_data_len > end) {
++            break;
++        }
++
++        /* ALPN (0x0010): list_len(2) + proto_len(1) + proto */
++        if (type == 0x0010 && ext_data_len >= 4) {
++            proto_len = cur[2];
++            if (proto_len > 0 && (size_t)(3 + proto_len) <= ext_data_len) {
++                c->ssl->ja4s_alpn[0] = cur[3];
++                c->ssl->ja4s_alpn[1] = cur[3 + proto_len - 1];
++            }
++        }
++
++        /* supported_versions (0x002b): 2-byte selected version */
++        if (type == 0x002b && ext_data_len >= 2) {
++            v = ((uint16_t) cur[0] << 8) | cur[1];
++            if (v >= 0x0304) {
++                c->ssl->ja4s_version = v;
++            }
++        }
++
++        if (!NGX_SSL_IS_GREASE(type)) {
++            count++;
++        }
++
++        cur += ext_data_len;
++    }
++
++    if (count == 0) {
++        return;
++    }
++
++    new_exts = ngx_pnalloc(c->pool,
++                    (c->ssl->ja4s_extensions_sz + count)
++                    * sizeof(unsigned short));
++    if (new_exts == NULL) {
++        return;
++    }
++
++    if (c->ssl->ja4s_extensions_sz > 0 && c->ssl->ja4s_extensions != NULL) {
++        ngx_memcpy(new_exts, c->ssl->ja4s_extensions,
++                   c->ssl->ja4s_extensions_sz * sizeof(unsigned short));
++    }
++
++    /* second pass: fill in wire order */
++    i = c->ssl->ja4s_extensions_sz;
++    for (cur = p; cur + 4 <= end; ) {
++        type         = ((unsigned short) cur[0] << 8) | cur[1];
++        ext_data_len = ((uint16_t) cur[2] << 8) | cur[3];
++        cur += 4;
++        if (cur + ext_data_len > end) {
++            break;
++        }
++        if (!NGX_SSL_IS_GREASE(type)) {
++            new_exts[i++] = type;
++        }
++        cur += ext_data_len;
++    }
++
++    c->ssl->ja4s_extensions     = new_exts;
++    c->ssl->ja4s_extensions_sz += count;
++}
++
++/* Installed on upstream (client-mode) SSL connections.
++ * Fires for every incoming TLS handshake message from the backend server.
++ * Captures ServerHello cipher + extensions and EncryptedExtensions for JA4S.
++ */
++static void
++ngx_ssl_ja4s_msg_callback(int write_p, int version, int content_type,
++    const void *buf, size_t len, SSL *ssl, void *arg)
++{
++    const unsigned char    *p = buf;
++    ngx_connection_t       *c = arg;
++    size_t                  session_id_len;
++    size_t                  off;
++    uint16_t                ext_total;
++
++    (void) version;
++    (void) ssl;
++
++    /* only care about incoming handshake records */
++    if (write_p != 0) {
++        return;
++    }
++    if (content_type != SSL3_RT_HANDSHAKE) {
++        return;
++    }
++    if (c == NULL || c->ssl == NULL) {
++        return;
++    }
++    if (len < 4) {
++        return;
++    }
++
++    /* ServerHello (type 0x02) */
++    if (p[0] == 0x02) {
++        if (len < 44) {
++            return;
++        }
++        /* layout: msg_type(1) body_len(3) legacy_ver(2) random(32) sid_len(1) */
++        session_id_len = p[38];
++        off = 39 + session_id_len;
++        if (off + 5 > len) {
++            return;
++        }
++        c->ssl->ja4s_cipher = ((unsigned short) p[off] << 8) | p[off + 1];
++        off += 3; /* cipher(2) + compression_method(1) */
++        if (off + 2 > len) {
++            return;
++        }
++        ext_total = ((uint16_t) p[off] << 8) | p[off + 1];
++        off += 2;
++        /* set legacy_version as fallback (supported_versions will override) */
++        if (c->ssl->ja4s_version == 0) {
++            c->ssl->ja4s_version = ((uint16_t) p[4] << 8) | p[5];
++        }
++        if (off + ext_total <= len) {
++            ngx_ssl_ja4s_parse_exts(c, p + off, ext_total);
++        }
++        return;
++    }
++
++    /* EncryptedExtensions (type 0x08) — TLS 1.3 only */
++    if (p[0] == 0x08 && len >= 6) {
++        ext_total = ((uint16_t) p[4] << 8) | p[5];
++        if ((size_t)(6 + ext_total) <= len) {
++            ngx_ssl_ja4s_parse_exts(c, p + 6, ext_total);
 +        }
 +    }
 +}
@@ -123,24 +283,104 @@ diff -r 2e63d59c342d src/event/ngx_event_openssl.c
 +        }
 +    }
 +
++    /* JA4: SNI presence */
++    {
++        const unsigned char           *sni_data;
++        size_t                         sni_len;
++        c->ssl->ja4_sni = SSL_client_hello_get0_ext(s,
++            TLSEXT_TYPE_server_name, &sni_data, &sni_len) ? 'd' : 'i';
++    }
++
++    /* JA4: highest TLS version offered (supported_versions or legacy) */
++    {
++        const unsigned char           *sv_data;
++        size_t                         sv_len;
++        size_t                         sv_off;
++        unsigned short                 sv_best;
++        unsigned short                 sv_val;
++
++#if OPENSSL_VERSION_NUMBER >= 0x30000000L
++        sv_best = (unsigned short) SSL_client_hello_get0_legacy_version(s);
++#else
++        sv_best = (unsigned short) SSL_client_hello_get_legacy_version(s);
++#endif
++        if (SSL_client_hello_get0_ext(s, TLSEXT_TYPE_supported_versions,
++                                      &sv_data, &sv_len) && sv_len >= 3) {
++            for (sv_off = 1; sv_off + 1 < sv_len; sv_off += 2) {
++                sv_val = ((unsigned short) sv_data[sv_off] << 8)
++                         | sv_data[sv_off + 1];
++                if (!NGX_SSL_IS_GREASE(sv_val) && sv_val > sv_best) {
++                    sv_best = sv_val;
++                }
++            }
++        }
++        c->ssl->ja4_version = sv_best;
++    }
++
++    /* JA4: ALPN first+last character of first protocol string */
++    {
++        const unsigned char           *alpn_data;
++        size_t                         alpn_len;
++        unsigned char                  proto_len;
++
++        if (SSL_client_hello_get0_ext(s,
++                TLSEXT_TYPE_application_layer_protocol_negotiation,
++                &alpn_data, &alpn_len) && alpn_len >= 4) {
++            proto_len = alpn_data[3];
++            if (proto_len > 0 && (size_t)(4 + proto_len) <= alpn_len) {
++                c->ssl->ja4_alpn[0] = alpn_data[4];
++                c->ssl->ja4_alpn[1] = alpn_data[4 + proto_len - 1];
++            }
++        }
++    }
++
++    /* JA4: signature algorithms in wire order */
++    {
++        const unsigned char           *sa_data;
++        size_t                         sa_len;
++        size_t                         sa_count;
++        size_t                         sa_i;
++
++        if (SSL_client_hello_get0_ext(s, TLSEXT_TYPE_signature_algorithms,
++                                      &sa_data, &sa_len) && sa_len >= 2) {
++            sa_count = (((size_t) sa_data[0] << 8) | sa_data[1]) / 2;
++            if (sa_count && sa_len >= 2 + sa_count * 2) {
++                c->ssl->ja4_sig_algs = ngx_pnalloc(c->pool,
++                                            sa_count * sizeof(unsigned short));
++                if (c->ssl->ja4_sig_algs != NULL) {
++                    c->ssl->ja4_sig_algs_sz = sa_count;
++                    for (sa_i = 0; sa_i < sa_count; sa_i++) {
++                        c->ssl->ja4_sig_algs[sa_i] =
++                            ((unsigned short) sa_data[2 + sa_i * 2] << 8)
++                            | sa_data[2 + sa_i * 2 + 1];
++                    }
++                }
++            }
++        }
++    }
++
 +    return 1;
 +}
-+/* ----- JA3 HACK END -------------------------------------------------------*/
++/* ----- JA3/JA4 HACK END ---------------------------------------------------*/
  
  ngx_int_t
  ngx_ssl_handshake(ngx_connection_t *c)
-@@ -1813,6 +1924,10 @@
+@@ -1813,6 +2159,14 @@
  
      ngx_ssl_clear_error(c->log);
  
-+/* ----- JA3 HACK START -----------------------------------------------------*/
-+    SSL_CTX_set_client_hello_cb(c->ssl->session_ctx, ngx_SSL_early_cb_fn, c);
-+/* ----- JA3 HACK END -------------------------------------------------------*/
++/* ----- JA3/JA4 HACK START -------------------------------------------------*/
++    if (SSL_is_server(c->ssl->connection)) {
++        SSL_CTX_set_client_hello_cb(c->ssl->session_ctx, ngx_SSL_early_cb_fn, c);
++    } else {
++        SSL_set_msg_callback(c->ssl->connection, ngx_ssl_ja4s_msg_callback);
++    }
++/* ----- JA3/JA4 HACK END ---------------------------------------------------*/
 +
      n = SSL_do_handshake(c->ssl->connection);
  
      ngx_log_debug1(NGX_LOG_DEBUG_EVENT, c->log, 0, "SSL_do_handshake: %d", n);
-@@ -1831,6 +1946,10 @@
+@@ -1831,6 +2185,10 @@
          ngx_ssl_handshake_log(c);
  #endif
  
@@ -154,7 +394,7 @@ diff -r 2e63d59c342d src/event/ngx_event_openssl.c
 diff -r 2e63d59c342d src/event/ngx_event_openssl.h
 --- a/src/event/ngx_event_openssl.h	Tue Sep 10 16:48:11 2024 +0400
 +++ b/src/event/ngx_event_openssl.h	Sat Sep 14 18:00:11 2024 +0000
-@@ -128,6 +128,20 @@
+@@ -128,6 +128,35 @@
      unsigned                    in_ocsp:1;
      unsigned                    early_preread:1;
      unsigned                    write_blocked:1;
@@ -172,6 +412,21 @@ diff -r 2e63d59c342d src/event/ngx_event_openssl.h
 +    size_t                      point_formats_sz;
 +    unsigned char              *point_formats;
 +/* ----- JA3 HACK END -------------------------------------------------------*/
++
++/* ----- JA4 HACK START -----------------------------------------------------*/
++    unsigned short              ja4_version;       /* highest TLS version in ClientHello */
++    unsigned char               ja4_sni;           /* 'd' SNI present, 'i' absent       */
++    unsigned char               ja4_alpn[2];       /* first + last char of first ALPN    */
++    size_t                      ja4_sig_algs_sz;
++    unsigned short             *ja4_sig_algs;      /* signature algorithms (wire order)  */
++
++    /* JA4S: filled by msg_callback on upstream (client-mode) connections */
++    unsigned short              ja4s_version;
++    unsigned char               ja4s_alpn[2];
++    unsigned short              ja4s_cipher;
++    size_t                      ja4s_extensions_sz;
++    unsigned short             *ja4s_extensions;   /* server extensions (wire order)     */
++/* ----- JA4 HACK END -------------------------------------------------------*/
  };
  
  

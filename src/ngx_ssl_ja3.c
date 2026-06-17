@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2019 Paulo Pacheco
+ * Copyright (C) 2017-2026 Paulo Pacheco
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without

@@ -55,7 +55,7 @@ if [ -d "$NGINX_TESTS_LIB" ] && [ ! -e "$MODULE/t/lib" ]; then
 fi
 
 cd "$MODULE"
-prove -v t/http_ssl_ja3.t t/stream_ssl_ja3.t
+prove -v t/http_ssl_ja3.t t/stream_ssl_ja3.t t/http_ssl_ja4.t t/stream_ssl_ja4.t
 
 echo ""
 echo "━━━ All tests passed ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"

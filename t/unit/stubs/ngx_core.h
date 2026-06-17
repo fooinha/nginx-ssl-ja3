@@ -1,5 +1,5 @@
 /*
- * Minimal nginx type and function stubs for unit testing ngx_ssl_ja3.c
+ * Minimal nginx type and function stubs for unit testing ngx_ssl_ja3/ja4.c
  * without a full nginx build.
  */
 #ifndef NGX_CORE_STUB_H
@@ -31,7 +31,7 @@ typedef struct ngx_pool_s ngx_pool_t;
 struct ngx_log_s  { ngx_uint_t log_level; };
 struct ngx_pool_s { ngx_log_t *log; };
 
-/* Minimal ngx_ssl_connection_t with the JA3-patched fields */
+/* Minimal ngx_ssl_connection_t with JA3 and JA4/JA4S patched fields */
 typedef struct {
     SSL            *connection;   /* underlying OpenSSL object */
     unsigned        handshaked:1;
@@ -48,6 +48,20 @@ typedef struct {
 
     size_t          point_formats_sz;
     unsigned char  *point_formats;
+
+    /* JA4 fields */
+    unsigned short  ja4_version;
+    unsigned char   ja4_sni;
+    unsigned char   ja4_alpn[2];
+    size_t          ja4_sig_algs_sz;
+    unsigned short *ja4_sig_algs;
+
+    /* JA4S fields */
+    unsigned short  ja4s_version;
+    unsigned char   ja4s_alpn[2];
+    unsigned short  ja4s_cipher;
+    size_t          ja4s_extensions_sz;
+    unsigned short *ja4s_extensions;
 } ngx_ssl_connection_t;
 
 typedef struct ngx_connection_s ngx_connection_t;
@@ -66,9 +80,14 @@ struct ngx_connection_s {
 #define ngx_log_debug1(level, log, err, fmt, a1)
 #define ngx_log_debug2(level, log, err, fmt, a1, a2)
 
+/* Standard memory helpers */
+#define ngx_memcpy(dst, src, n)     memcpy(dst, src, n)
+#define ngx_memzero(buf, n)         memset(buf, 0, n)
+#define ngx_qsort                   qsort
+
 /*
- * Set to 1 before a call to make the next ngx_pnalloc return NULL (OOM sim).
- * Resets to 0 automatically after triggering.
+ * Set to 1 before a call to make the next ngx_pnalloc/ngx_palloc return NULL.
+ * Resets automatically after triggering once.
  */
 static int ngx_pnalloc_fail_next = 0;
 
@@ -81,6 +100,12 @@ ngx_pnalloc(ngx_pool_t *pool, size_t size)
         return NULL;
     }
     return malloc(size);
+}
+
+static inline void *
+ngx_palloc(ngx_pool_t *pool, size_t size)
+{
+    return ngx_pnalloc(pool, size);
 }
 
 /*

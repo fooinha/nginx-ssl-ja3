@@ -1,5 +1,7 @@
 # nginx-ssl-ja3
 
+**Release:** v0.0.2 (stable) · [v0.1.0-alpha](https://github.com/fooinha/nginx-ssl-ja3/tree/feat/ja4) (JA4/JA4S experimental — see below)
+
 nginx module for SSL/TLS JA3 fingerprinting.
 
 ## Description
@@ -146,6 +148,38 @@ A dev image (with a from-source OpenSSL build) and a lean test image are availab
 docker compose -f docker/docker-compose.yml up --build nginx-dev
 
 # Lean test runner (CI-style)
+docker compose -f docker/docker-compose.yml run --rm nginx-test
+```
+
+---
+
+## Experimental: JA4 / JA4S fingerprinting
+
+Branch [`feat/ja4`](https://github.com/fooinha/nginx-ssl-ja3/tree/feat/ja4) (tagged [`v0.1.0-alpha`](https://github.com/fooinha/nginx-ssl-ja3/releases/tag/v0.1.0-alpha))
+adds support for [JA4+](https://github.com/FoxIO-LLC/ja4) TLS fingerprinting alongside the existing JA3 variables:
+
+| Variable | Description |
+|---|---|
+| `$http_ssl_ja4` | JA4 client fingerprint for HTTP/HTTPS connections (36 chars) |
+| `$stream_ssl_ja4` | JA4 client fingerprint for stream SSL connections |
+| `$stream_ssl_ja4s` | JA4S **server** fingerprint — only populated in TLS proxy mode |
+
+JA4 format: `t{ver}{sni}{nc:02d}{ne:02d}{alpn}_{cipher_hash}_{ext_hash}`
+
+Example: `t13d0306h2_55b375c5d22e_a56c5b993250`
+
+JA4S format: `t{ver}{ne:02d}{alpn}_{cipher}_{ext_hash}`
+
+Example: `t130200_1301_a56c5b993250`
+
+> **Status:** experimental — not ready for production use. The branch passes
+> 198 tests (148 C unit tests + 50 Perl integration tests) but the JA4S golden-dataset
+> Docker containers and full proxy-mode integration tests are still in progress.
+
+To try it:
+
+```bash
+git checkout feat/ja4
 docker compose -f docker/docker-compose.yml run --rm nginx-test
 ```
 
